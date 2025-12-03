@@ -6,7 +6,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Downloads](https://img.shields.io/npm/dm/llmverify.svg)](https://www.npmjs.com/package/llmverify)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
-[![Tests](https://img.shields.io/badge/Tests-218%20Passing-green.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-296%20Passing-green.svg)]()
+[![Coverage](https://img.shields.io/badge/Coverage-84%25-yellowgreen.svg)]()
 
 ---
 
@@ -23,13 +24,16 @@
 
 ### What llmverify Does
 
-- **Hallucination Risk Scoring** - Heuristic-based risk indicators (not fact verification)
-- **Prompt Injection Detection** - Pattern-based attack detection
-- **PII Redaction** - Regex-based sensitive data removal
-- **JSON Repair** - Auto-fix common JSON formatting errors
-- **Runtime Health Monitoring** - Track latency, token rate, behavioral drift
-- **Model-Agnostic Adapters** - Unified interface for any LLM provider
-- **Output Classification** - Intent detection, instruction compliance checking
+| Feature | Status | Description |
+|---------|--------|-------------|
+| **Prompt Injection Detection** | Stable | Pattern-based attack detection |
+| **PII Redaction** | Stable | Regex-based sensitive data removal |
+| **JSON Repair** | Stable | Auto-fix common JSON formatting errors |
+| **Runtime Health Monitoring** | Stable | Track latency, token rate, behavioral drift |
+| **Model-Agnostic Adapters** | Stable | Unified interface for any LLM provider |
+| **Output Classification** | Stable | Intent detection, instruction compliance |
+| **Hallucination Risk Scoring** | Beta | Heuristic-based risk indicators |
+| **Harmful Content Detection** | Beta | Pattern-based content filtering |
 
 **Important**: llmverify uses heuristics, not AI. It provides risk indicators, not ground truth. See [LIMITATIONS.md](docs/LIMITATIONS.md) for details.
 
