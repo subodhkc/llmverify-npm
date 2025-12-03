@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Downloads](https://img.shields.io/npm/dm/llmverify.svg)](https://www.npmjs.com/package/llmverify)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
-[![Tests](https://img.shields.io/badge/Tests-546%20Passing-green.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-557%20Passing-green.svg)]()
 [![Coverage](https://img.shields.io/badge/Coverage-92%25-brightgreen.svg)]()
 
 ---

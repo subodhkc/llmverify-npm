@@ -98,7 +98,7 @@ export interface Contradiction {
   section2: number;
   claim1: string;
   claim2: string;
-  type: 'factual' | 'temporal' | 'logical';
+  type: 'factual' | 'temporal' | 'logical' | 'sentiment_drift' | 'style_drift' | 'numerical';
   confidence: number;
 }
 

@@ -251,3 +251,15 @@ export type {
   CoreRunOptions,
   PipelineStep
 } from './core';
+
+// Audit Logger - Local-only audit logging
+export {
+  AuditLogger,
+  getAuditLogger,
+  auditLog
+} from './audit';
+
+export type {
+  AuditEntry,
+  AuditConfig
+} from './audit';

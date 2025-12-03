@@ -29,11 +29,17 @@ describe('Risk Analyzer', () => {
   });
 
   describe('analyzeRiskIndicators', () => {
-    it('should return the claim unchanged for free tier', () => {
+    it('should analyze claim and add risk indicators', () => {
       const claim = createClaim('The sky is blue.');
       const result = analyzeRiskIndicators(claim, {} as any);
       
-      expect(result).toEqual(claim);
+      // Should preserve original properties
+      expect(result.text).toBe(claim.text);
+      expect(result.span).toEqual(claim.span);
+      expect(result.type).toBe(claim.type);
+      
+      // Should have risk indicators
+      expect(result.riskIndicators).toBeDefined();
     });
 
     it('should preserve existing risk indicators', () => {
@@ -49,6 +55,30 @@ describe('Risk Analyzer', () => {
       const result = analyzeRiskIndicators(claim, {} as any);
       
       expect(result.riskIndicators.missingCitation).toBe(true);
+    });
+
+    it('should detect overconfident language', () => {
+      const claim = createClaim('This is absolutely certain and definitely true.');
+      const result = analyzeRiskIndicators(claim, {} as any);
+      
+      // Should detect overconfidence
+      expect((result.riskIndicators as any).overconfidenceRisk).toBeGreaterThan(0);
+    });
+
+    it('should detect fabricated statistics', () => {
+      const claim = createClaim('Exactly 73.47% of users reported a 94.2% improvement.');
+      const result = analyzeRiskIndicators(claim, {} as any);
+      
+      // Should detect fabricated stats
+      expect((result.riskIndicators as any).fabricatedStatRisk).toBeGreaterThan(0);
+    });
+
+    it('should detect fake authority appeals', () => {
+      const claim = createClaim('Studies show that experts agree this is proven.');
+      const result = analyzeRiskIndicators(claim, {} as any);
+      
+      // Should detect fake authority
+      expect((result.riskIndicators as any).fakeAuthorityRisk).toBeGreaterThan(0);
     });
   });
 
