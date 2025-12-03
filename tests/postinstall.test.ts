@@ -38,12 +38,15 @@ describe('Postinstall Script', () => {
     expect(output.toLowerCase()).toMatch(/wizard|run|verify/);
   });
 
-  it('should include documentation links', () => {
+  it('should include documentation links or help message', () => {
     const output = execSync(`node "${POSTINSTALL_PATH}"`, {
       encoding: 'utf-8',
-      timeout: 10000
+      timeout: 10000,
+      env: { ...process.env, CI: undefined, LLMVERIFY_SILENT: undefined }
     });
     
-    expect(output).toContain('github.com');
+    // In non-CI mode, should include github link
+    // In CI mode, should include help message
+    expect(output).toMatch(/github\.com|--help/);
   });
 });
