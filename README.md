@@ -8,6 +8,17 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
 [![Tests](https://img.shields.io/badge/Tests-218%20Passing-green.svg)]()
 
+---
+
+### New to llmverify?
+
+| Guide | Description |
+|-------|-------------|
+| [Getting Started](docs/GETTING-STARTED.md) | Beginner-friendly guide for students and newcomers |
+| [For Developers](docs/FOR-DEVELOPERS.md) | Integration patterns, configuration, and production usage |
+
+---
+
 **llmverify** is a local-first monitoring and classification layer for LLM outputs. Works with OpenAI, Claude, Llama, Gemini, or any LLM provider.
 
 ### What llmverify Does
