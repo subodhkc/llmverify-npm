@@ -39,7 +39,6 @@
     "test": "jest",
     "test:coverage": "jest --coverage",
     "test:watch": "jest --watch",
-    "lint": "eslint src/**/*.ts",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "npm run build && npm test",
     "doctor": "node dist/cli.js doctor",
