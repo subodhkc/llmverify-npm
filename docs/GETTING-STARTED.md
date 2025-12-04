@@ -1,4 +1,5 @@
 # Getting Started with llmverify
+## For Complete Beginners (Even 10-Year-Olds Can Follow This!)
 
 A beginner-friendly guide for students and developers new to LLM safety.
 

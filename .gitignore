@@ -40,11 +40,15 @@ demo/recordings/
 prompts/
 
 # Internal documentation (local only, not for GitHub)
+# These files are development/AI chat artifacts and should never be committed
 *-COMPLETE.md
 *-SETUP.md
 *-SUMMARY.md
 *-PROGRESS.md
 *-HANDOFF.md
+*-ANALYSIS.md
+*-PLAN.md
+*-NOTES.md
 DEPLOYMENT-*.md
 SESSION-*.md
 VERIFICATION-*.md
@@ -52,7 +56,27 @@ IMPLEMENTATION-*.md
 FINAL-*.md
 IDE-SETUP-*.md
 WINDSURF-*.md
+AUTO-*.md
+CHECKPOINT-*.md
+MEMORY-*.md
+CHAT-*.md
+AI-*.md
+
+# Test scripts (local only)
 test-*.ps1
 verify.ps1
 check-ai.ps1
 monitor-*.ps1
+demo-*.ps1
+example-*.ps1
+
+# Development artifacts
+.cascade/
+.windsurf/
+.ai/
+prompts/
+scratch/
+notes/
+todo.md
+TODO.md
+NOTES.md

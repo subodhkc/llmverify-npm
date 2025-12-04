@@ -52,7 +52,7 @@ function formatHumanReadable(result: VerifyResult): {
   
   switch (risk.level) {
     case 'low':
-      verdict = '✅ SAFE TO USE';
+      verdict = '[PASS] SAFE TO USE';
       explanation = 'This AI response passed all safety checks. No significant risks detected.';
       nextSteps = [
         'You can use this content confidently',
@@ -61,7 +61,7 @@ function formatHumanReadable(result: VerifyResult): {
       ];
       break;
     case 'moderate':
-      verdict = '⚠️ REVIEW RECOMMENDED';
+      verdict = '[WARN] REVIEW RECOMMENDED';
       explanation = 'Some potential issues detected. Human review recommended before use.';
       nextSteps = [
         'Review the findings below carefully',
@@ -71,7 +71,7 @@ function formatHumanReadable(result: VerifyResult): {
       ];
       break;
     case 'high':
-      verdict = '🚨 HIGH RISK - CAUTION';
+      verdict = '[FAIL] HIGH RISK - CAUTION';
       explanation = 'Significant risks detected. Do not use without thorough review and revision.';
       nextSteps = [
         'DO NOT use this content as-is',
@@ -82,7 +82,7 @@ function formatHumanReadable(result: VerifyResult): {
       ];
       break;
     case 'critical':
-      verdict = '🛑 CRITICAL - DO NOT USE';
+      verdict = '[BLOCK] CRITICAL - DO NOT USE';
       explanation = 'Critical safety issues detected. This content should not be used.';
       nextSteps = [
         'BLOCK this content immediately',
@@ -96,11 +96,11 @@ function formatHumanReadable(result: VerifyResult): {
   
   // Format tests that were run
   const testsRun = [
-    '🔍 Hallucination Detection - Checked for false claims and fabricated information',
-    '🔄 Consistency Analysis - Verified internal logical consistency',
-    '🛡️ Security Scan - Tested for prompt injection and security risks',
-    '🔒 Privacy Check - Scanned for PII and sensitive data leaks',
-    '⚖️ Safety Review - Evaluated for harmful or unsafe content'
+    '[CHECK] Hallucination Detection - Checked for false claims and fabricated information',
+    '[CHECK] Consistency Analysis - Verified internal logical consistency',
+    '[CHECK] Security Scan - Tested for prompt injection and security risks',
+    '[CHECK] Privacy Check - Scanned for PII and sensitive data leaks',
+    '[CHECK] Safety Review - Evaluated for harmful or unsafe content'
   ];
   
   // Format findings
