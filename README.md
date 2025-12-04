@@ -66,12 +66,17 @@ const { redacted } = redactPII(aiResponse);
 Run llmverify as an HTTP server for IDE integration or external tools.
 
 ```bash
-# Start server (default port 9009)
-npx llmverify-serve
+# Recommended: Using npm script
+npm run serve
+
+# Alternative: Direct execution
+node node_modules/llmverify/start-server.js
 
 # Custom port
-npx llmverify-serve --port=8080
+node node_modules/llmverify/start-server.js --port=8080
 ```
+
+**Note**: If using `npx llmverify-serve`, output may be buffered. Use the methods above for immediate feedback.
 
 ### API Endpoints
 
@@ -222,6 +227,7 @@ console.log(verifier.formatInline(result));
 
 ## Documentation
 
+- [Integration Guide](docs/INTEGRATION-GUIDE.md) - Complete integration patterns (Server, AI agents, IDE)
 - [Getting Started](docs/GETTING-STARTED.md) - Beginner tutorial
 - [CLI Reference](docs/CLI-REFERENCE.md) - Complete command reference
 - [API Reference](docs/API-REFERENCE.md) - Full API documentation

@@ -160,6 +160,7 @@
   "files": [
     "dist",
     "bin",
+    "start-server.js",
     "docs",
     "examples",
     "recipes",
