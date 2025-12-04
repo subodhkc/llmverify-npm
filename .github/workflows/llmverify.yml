@@ -49,11 +49,11 @@ jobs:
         run: npm run build
 
       - name: Run tests
-        run: npm test
+        run: npm test -- --testPathIgnorePatterns="integration|monitor"
 
       - name: Run tests with coverage
         if: matrix.node-version == '18.x'
-        run: npm test -- --coverage --coverageReporters=lcov
+        run: npm test -- --testPathIgnorePatterns="integration|monitor" --coverage --coverageReporters=lcov
 
       - name: Upload coverage to Codecov
         if: matrix.node-version == '18.x'

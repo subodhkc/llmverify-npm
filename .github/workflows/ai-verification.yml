@@ -69,9 +69,9 @@ jobs:
             echo "Verifying: $file"
             if ! npx llmverify run --file "$file" --preset $LLMVERIFY_PRESET --output summary; then
               FAILED=1
-              echo "❌ **$file**: Verification failed" >> $GITHUB_STEP_SUMMARY
+              echo "[FAIL] **$file**: Verification failed" >> $GITHUB_STEP_SUMMARY
             else
-              echo "✅ **$file**: Passed" >> $GITHUB_STEP_SUMMARY
+              echo "[OK] **$file**: Passed" >> $GITHUB_STEP_SUMMARY
             fi
           done
           
@@ -81,9 +81,9 @@ jobs:
               echo "Verifying fixture: $file"
               if ! npx llmverify run --file "$file" --preset $LLMVERIFY_PRESET --output summary; then
                 FAILED=1
-                echo "❌ **$file**: Verification failed" >> $GITHUB_STEP_SUMMARY
+                echo "[FAIL] **$file**: Verification failed" >> $GITHUB_STEP_SUMMARY
               else
-                echo "✅ **$file**: Passed" >> $GITHUB_STEP_SUMMARY
+                echo "[OK] **$file**: Passed" >> $GITHUB_STEP_SUMMARY
               fi
             done
           fi
@@ -96,7 +96,7 @@ jobs:
             exit 1
           fi
           
-          echo "✅ All AI outputs verified successfully"
+          echo "[OK] All AI outputs verified successfully"
 
       - name: Comment on PR
         if: github.event_name == 'pull_request' && always()
@@ -110,5 +110,5 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `## 🔍 llmverify AI Verification\n\nPreset: \`${{ env.LLMVERIFY_PRESET }}\`\n\nSee workflow run for details.`
+              body: `## llmverify AI Verification\n\nPreset: \`${{ env.LLMVERIFY_PRESET }}\`\n\nSee workflow run for details.`
             });

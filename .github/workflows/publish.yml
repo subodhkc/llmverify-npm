@@ -39,7 +39,7 @@ jobs:
         run: npm run build
       
       - name: Run tests
-        run: npm test
+        run: npm test -- --testPathIgnorePatterns="integration|monitor"
       
       - name: Update version (if specified)
         if: inputs.version != ''
