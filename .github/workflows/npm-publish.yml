@@ -37,7 +37,7 @@ jobs:
       - name: Verify package contents
         run: |
           npm pack --dry-run
-          echo "✓ Package contents verified"
+          echo "[OK] Package contents verified"
       
       - name: Publish to NPM with Provenance
         run: npm publish --provenance --access public
@@ -46,6 +46,6 @@ jobs:
       
       - name: Output result
         run: |
-          echo "✓ Package published successfully with provenance!"
-          echo "✓ Provenance badge will appear on npmjs.com"
-          echo "✓ Tag: ${{ github.ref_name }}"
+          echo "[OK] Package published successfully with provenance!"
+          echo "[OK] Provenance badge will appear on npmjs.com"
+          echo "[OK] Tag: ${{ github.ref_name }}"
