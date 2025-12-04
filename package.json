@@ -36,6 +36,7 @@
   "scripts": {
     "build": "tsc",
     "build:clean": "rm -rf dist && tsc",
+    "serve": "node start-server.js",
     "postinstall": "node dist/postinstall.js || true",
     "test": "jest",
     "test:coverage": "jest --coverage",
