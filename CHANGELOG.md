@@ -5,6 +5,33 @@ All notable changes to llmverify will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2024-12-04
+
+### Added
+- **Complete API Reference Documentation** (`docs/API-REFERENCE.md`)
+  - Comprehensive programmatic API documentation
+  - All functions with parameters, return types, and examples
+  - TypeScript type definitions
+  - Best practices and error handling
+- **JSON Schema for verify() Output** (`schema/verify-result.schema.json`)
+  - Formal JSON Schema (draft-07) for VerifyResult
+  - Complete type definitions and validation rules
+  - Example outputs for reference
+  - Machine-readable schema for validation tools
+- **Enhanced Documentation**
+  - Added schema directory to npm package
+  - Improved API discoverability
+
+### Changed
+- Package now includes `schema/` directory in published files
+- Enhanced type safety with formal JSON schema
+
+### Documentation
+- Complete API reference with all functions documented
+- JSON schema for programmatic validation
+- TypeScript type definitions reference
+- Best practices guide
+
 ## [1.3.0] - 2024-12-04
 
 ### Added

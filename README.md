@@ -1121,8 +1121,11 @@ MIT License. See [LICENSE](LICENSE) for details.
 ## Documentation
 
 - [GETTING-STARTED.md](docs/GETTING-STARTED.md) - Beginner-friendly guide for students
+- [API-REFERENCE.md](docs/API-REFERENCE.md) - Complete programmatic API documentation
+- [SERVER-MODE.md](docs/SERVER-MODE.md) - HTTP server mode guide for IDE integration
 - [ALGORITHMS.md](docs/ALGORITHMS.md) - How each engine computes scores
 - [LIMITATIONS.md](docs/LIMITATIONS.md) - What llmverify can and cannot do
+- [JSON Schema](schema/verify-result.schema.json) - Formal schema for verify() output
 
 ## Links
 
