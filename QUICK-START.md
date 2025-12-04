@@ -137,14 +137,19 @@ npm run serve
 
 ### Port already in use
 
+**Quick fix:**
 ```powershell
-# Kill existing server
+# Kill existing server and restart
 $proc = Get-NetTCPConnection -LocalPort 9009 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique
 if ($proc) { Stop-Process -Id $proc -Force }
-
-# Restart
 npm run serve
 ```
+
+**Or use the helper script:**
+```bash
+npm run serve:force
+```
+This automatically kills any process on port 9009 and starts the server.
 
 ---
 

@@ -40,6 +40,12 @@ npm run setup-ai
 # Helps your AI assistant guide you through llmverify usage
 ```
 
+**Troubleshooting - Port Already in Use:**
+```bash
+npm run serve:force
+# Automatically kills existing process and starts server
+```
+
 See [QUICK-START.md](QUICK-START.md) for detailed instructions.
 
 ---
