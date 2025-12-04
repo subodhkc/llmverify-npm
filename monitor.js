@@ -91,9 +91,49 @@ function explainRisk(result) {
 
 async function checkServer() {
   return new Promise((resolve) => {
-    http.get(`${SERVER_URL}/health`, (res) => {
+    const req = http.get(`${SERVER_URL}/health`, (res) => {
       resolve(res.statusCode === 200);
-    }).on('error', () => resolve(false));
+    });
+    
+    req.on('error', (err) => {
+      if (err.code === 'ECONNREFUSED') {
+        log('\nERROR: Cannot connect to server', 'red');
+        log('', 'reset');
+        log('The llmverify server is not running.', 'yellow');
+        log('', 'reset');
+        log('SOLUTION:', 'cyan');
+        log('  1. Open a new terminal', 'gray');
+        log('  2. Run: npm run serve', 'gray');
+        log('  3. Wait for "Running on http://localhost:9009"', 'gray');
+        log('  4. Then restart this monitor', 'gray');
+        log('', 'reset');
+        log('If port 9009 is already in use:', 'yellow');
+        log('  Run: npm run serve:force', 'gray');
+        log('', 'reset');
+      } else if (err.code === 'ETIMEDOUT') {
+        log('\nERROR: Server connection timeout', 'red');
+        log('', 'reset');
+        log('The server is not responding.', 'yellow');
+        log('', 'reset');
+        log('SOLUTION:', 'cyan');
+        log('  1. Check if server is running: npm run serve', 'gray');
+        log('  2. Check your firewall settings', 'gray');
+        log('  3. Ensure port 9009 is not blocked', 'gray');
+        log('', 'reset');
+      } else {
+        log(`\nERROR: ${err.message}`, 'red');
+        log('', 'reset');
+        log('SOLUTION:', 'cyan');
+        log('  See docs/ERROR-GUIDE.md for detailed troubleshooting', 'gray');
+        log('', 'reset');
+      }
+      resolve(false);
+    });
+    
+    req.setTimeout(5000, () => {
+      req.destroy();
+      resolve(false);
+    });
   });
 }
 
@@ -118,24 +158,40 @@ async function verifyContent(content) {
       res.on('end', () => {
         try {
           if (body) {
-            resolve(JSON.parse(body));
+            const result = JSON.parse(body);
+            resolve(result);
           } else {
-            reject(new Error('Empty response from server'));
+            reject(new Error('EMPTY_RESPONSE'));
           }
-        } catch (e) {
-          reject(new Error(`JSON parse error: ${e.message}`));
+        } catch (err) {
+          reject(new Error('PARSE_ERROR'));
         }
       });
     });
 
-    req.on('error', reject);
+    req.on('error', (err) => {
+      if (err.code === 'ECONNREFUSED') {
+        reject(new Error('SERVER_NOT_RUNNING'));
+      } else if (err.code === 'ETIMEDOUT') {
+        reject(new Error('CONNECTION_TIMEOUT'));
+      } else if (err.code === 'ECONNRESET') {
+        reject(new Error('CONNECTION_RESET'));
+      } else {
+        reject(new Error(`NETWORK_ERROR: ${err.message}`));
+      }
+    });
+
     req.on('timeout', () => {
       req.destroy();
-      reject(new Error('Request timeout'));
+      reject(new Error('REQUEST_TIMEOUT'));
     });
-    
-    req.write(data);
-    req.end();
+
+    try {
+      req.write(data);
+      req.end();
+    } catch (err) {
+      reject(new Error(`WRITE_ERROR: ${err.message}`));
+    }
   });
 }
 
@@ -244,7 +300,58 @@ async function monitor() {
           log('');
           
         } catch (error) {
-          log(`ERROR: Verification failed - ${error.message}`, 'red');
+          log('');
+          log('ERROR: Verification failed', 'red');
+          log('', 'reset');
+          
+          const errorMsg = error.message;
+          
+          if (errorMsg === 'SERVER_NOT_RUNNING') {
+            log('The server stopped responding.', 'yellow');
+            log('', 'reset');
+            log('SOLUTION:', 'cyan');
+            log('  1. Check Terminal 1 - is the server still running?', 'gray');
+            log('  2. If not, restart it: npm run serve', 'gray');
+            log('  3. Then copy the AI response again', 'gray');
+          } else if (errorMsg === 'CONNECTION_TIMEOUT') {
+            log('Server took too long to respond.', 'yellow');
+            log('', 'reset');
+            log('SOLUTION:', 'cyan');
+            log('  1. The content might be too long', 'gray');
+            log('  2. Try copying a shorter section', 'gray');
+            log('  3. Or wait and try again', 'gray');
+          } else if (errorMsg === 'CONNECTION_RESET') {
+            log('Connection was interrupted.', 'yellow');
+            log('', 'reset');
+            log('SOLUTION:', 'cyan');
+            log('  1. Restart the server: npm run serve:force', 'gray');
+            log('  2. Then restart this monitor', 'gray');
+          } else if (errorMsg === 'REQUEST_TIMEOUT') {
+            log('Verification took too long (>10 seconds).', 'yellow');
+            log('', 'reset');
+            log('SOLUTION:', 'cyan');
+            log('  1. Content might be too large', 'gray');
+            log('  2. Try verifying smaller sections', 'gray');
+            log('  3. Check server performance', 'gray');
+          } else if (errorMsg === 'EMPTY_RESPONSE') {
+            log('Server returned no data.', 'yellow');
+            log('', 'reset');
+            log('SOLUTION:', 'cyan');
+            log('  1. Restart server: npm run serve:force', 'gray');
+            log('  2. Check server logs for errors', 'gray');
+          } else if (errorMsg === 'PARSE_ERROR') {
+            log('Server response was invalid.', 'yellow');
+            log('', 'reset');
+            log('SOLUTION:', 'cyan');
+            log('  1. Restart server: npm run serve:force', 'gray');
+            log('  2. Update llmverify: npm update llmverify', 'gray');
+          } else {
+            log(`${errorMsg}`, 'yellow');
+            log('', 'reset');
+            log('SOLUTION:', 'cyan');
+            log('  See docs/ERROR-GUIDE.md for detailed troubleshooting', 'gray');
+          }
+          log('');
         }
       }
     } catch (error) {
