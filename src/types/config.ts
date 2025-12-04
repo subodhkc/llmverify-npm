@@ -116,7 +116,7 @@ export const DEFAULT_CONFIG: Config = {
 export const TIER_LIMITS: Record<Tier, Partial<Config>> = {
   free: {
     performance: {
-      maxContentLength: 10000,
+      maxContentLength: 1000000, // 1MB - local processing has no artificial limits
       timeout: 30000,
       cacheEnabled: true,
       cacheTTL: 3600
@@ -125,7 +125,7 @@ export const TIER_LIMITS: Record<Tier, Partial<Config>> = {
   
   team: {
     performance: {
-      maxContentLength: 50000,
+      maxContentLength: 1000000, // 1MB
       timeout: 60000,
       cacheEnabled: true,
       cacheTTL: 7200
@@ -134,7 +134,7 @@ export const TIER_LIMITS: Record<Tier, Partial<Config>> = {
   
   professional: {
     performance: {
-      maxContentLength: 100000,
+      maxContentLength: 1000000, // 1MB
       timeout: 120000,
       cacheEnabled: true,
       cacheTTL: 14400

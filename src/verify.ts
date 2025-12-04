@@ -346,19 +346,18 @@ function validateInput(content: string, config: Config): void {
     );
   }
   
-  // Check tier limits
+  // Check reasonable content limits (prevent DoS)
   const limits = TIER_LIMITS[config.tier];
-  if (content.length > (limits.performance?.maxContentLength || 100000)) {
+  const maxLength = limits.performance?.maxContentLength || 1000000;
+  if (content.length > maxLength) {
     throw new ValidationError(
-      `Content exceeds tier limit (${limits.performance?.maxContentLength || 100000} chars). ` +
-      `Current: ${content.length} chars. ` +
-      `Upgrade to ${config.tier === 'free' ? 'Team' : 'Professional'} tier for higher limits.`,
+      `Content exceeds maximum size (${maxLength.toLocaleString()} chars). ` +
+      `Current: ${content.length.toLocaleString()} chars. ` +
+      `Try verifying smaller sections or breaking content into chunks.`,
       ErrorCode.CONTENT_TOO_LARGE,
       {
         contentLength: content.length,
-        maxLength: limits.performance?.maxContentLength || 100000,
-        currentTier: config.tier,
-        suggestedTier: config.tier === 'free' ? 'team' : 'professional'
+        maxLength: maxLength
       }
     );
   }

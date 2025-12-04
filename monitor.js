@@ -248,6 +248,27 @@ async function monitor() {
         
         try {
           const result = await verifyContent(clipboard);
+          
+          // Check if server returned an error
+          if (result.error || !result.result || !result.result.risk) {
+            const errorMsg = result.error || result.message || 'Unknown error';
+            log('');
+            log('ERROR: Server returned an error', 'red');
+            log('', 'reset');
+            log(errorMsg, 'yellow');
+            
+            // Check for content too large error
+            if (errorMsg.includes('exceeds maximum size') || errorMsg.includes('too large')) {
+              log('', 'reset');
+              log('SOLUTION:', 'cyan');
+              log('  1. Content is too large to verify at once', 'gray');
+              log('  2. Copy and verify smaller sections separately', 'gray');
+              log('  3. Break your AI response into chunks', 'gray');
+            }
+            log('');
+            continue;
+          }
+          
           const riskLevel = result.result.risk.level.toUpperCase();
           const riskScore = Math.round(result.result.risk.overall * 100 * 10) / 10;
           const verdict = result.summary.verdict;
