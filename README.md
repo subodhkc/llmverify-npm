@@ -15,6 +15,29 @@ Local-first AI output verification and safety monitoring for Node.js application
 npm install llmverify
 ```
 
+## Quick Start for Windsurf IDE
+
+**Terminal 1 - Start Server:**
+```powershell
+npm run serve
+# Keep this running - you'll see: "Running on http://localhost:9009"
+```
+
+**Terminal 2 - Start Monitor:**
+```powershell
+npm run monitor
+# Keep this visible - verification scores appear here
+```
+
+**Usage:**
+1. Chat with AI in Windsurf
+2. Select AI response and copy (Ctrl+C)
+3. See verification score in Terminal 2 automatically
+
+See [QUICK-START.md](QUICK-START.md) for detailed instructions.
+
+---
+
 ## Usage
 
 ```javascript
