@@ -266,7 +266,7 @@ async function monitor() {
               log('  3. Break your AI response into chunks', 'gray');
             }
             log('');
-            continue;
+            return; // Exit this verification attempt
           }
           
           const riskLevel = result.result.risk.level.toUpperCase();
