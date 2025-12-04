@@ -1,6 +1,6 @@
 {
   "name": "llmverify",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "AI Output Verification Toolkit — Local-first LLM safety, hallucination detection, PII redaction, prompt injection defense, and runtime monitoring. Zero telemetry. OWASP LLM Top 10 aligned.",
   "main": "dist/index.js",
   "module": "dist/index.js",
