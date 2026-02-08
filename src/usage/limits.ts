@@ -82,7 +82,7 @@ export function checkUsageLimit(tier: Tier = 'free'): UsageLimitResult {
       remaining: 0,
       used,
       limit,
-      warning: `Daily free limit reached (${limit}/day). Your verifications still work for ${graceLimit - used} more calls. Upgrade: https://haiec.com/llmverify/pricing`,
+      warning: `Daily ${tier} limit reached (${limit}/day). Your verifications still work for ${graceLimit - used} more calls. Upgrade: https://haiec.com/llmverify/pricing`,
       inGracePeriod: true
     };
   }

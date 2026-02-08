@@ -173,12 +173,15 @@ export function monitorLLM(
   return {
     async generate(opts: GenerateOptions): Promise<MonitoredResponse> {
       // Usage tracking — counts each generate() call
+      // Bypassed in test environment (LLMVERIFY_TEST=1)
       const tier = ((config as any).tier || 'free') as Tier;
-      const usageCheck = checkUsageLimit(tier);
-      if (!usageCheck.allowed) {
-        throw new Error(usageCheck.warning || 'Daily usage limit exceeded. Upgrade: https://haiec.com/llmverify/pricing');
+      if (!process.env.LLMVERIFY_TEST) {
+        const usageCheck = checkUsageLimit(tier);
+        if (!usageCheck.allowed) {
+          throw new Error(usageCheck.warning || 'Daily usage limit exceeded. Upgrade: https://haiec.com/llmverify/pricing');
+        }
+        incrementUsage('monitor', tier);
       }
-      incrementUsage('monitor', tier);
       
       const start = Date.now();
       

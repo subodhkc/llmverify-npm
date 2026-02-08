@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added - Tier System & Usage Tracking
 - Local-only usage tracking via `~/.llmverify/usage.json` — no network calls, no telemetry
-- Four pricing tiers: `free` (100 calls/day), `starter` (5,000), `pro` (50,000), `business` (unlimited)
+- Four pricing tiers: `free` (500 calls/day), `starter` (5,000), `pro` (50,000), `business` (unlimited)
 - Soft cap with grace period (10% above limit) before hard block
 - New error codes: `LLMVERIFY_7001` (usage limit exceeded), `LLMVERIFY_7002` (content length exceeded)
 - `checkUsageLimit()` and `checkContentLength()` exported for programmatic access

@@ -1,12 +1,45 @@
 # llmverify
 
-Local-first AI output verification and safety monitoring for Node.js applications.
+**Stop shipping unsafe AI output.** Local-first verification, safety monitoring, and guardrails for any LLM — in one `npm install`.
 
 [![npm version](https://badge.fury.io/js/llmverify.svg)](https://www.npmjs.com/package/llmverify)
 [![CI](https://github.com/subodhkc/llmverify-npm/actions/workflows/ci.yml/badge.svg)](https://github.com/subodhkc/llmverify-npm/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**100% Local** | **No Telemetry** | **Privacy-First**
+**100% Local** | **No Telemetry** | **Privacy-First** | **500 free calls/day**
+
+---
+
+## The Problem
+
+You're building with GPT-4, Claude, Gemini, or any LLM. Your AI:
+
+- **Hallucinates** facts and citations that don't exist
+- **Leaks PII** — emails, phone numbers, SSNs in responses
+- **Gets prompt-injected** — users trick it into ignoring instructions
+- **Returns broken JSON** that crashes your parser
+- **Drifts in quality** over time without anyone noticing
+
+You need a safety layer between your LLM and your users. That's llmverify.
+
+## What You Get
+
+```
+npm install llmverify
+```
+
+| Feature | One-liner | What it catches |
+|---------|-----------|-----------------|
+| **Verify output** | `await verify(aiResponse)` | Hallucinations, harmful content, quality issues |
+| **Block injections** | `isInputSafe(userMessage)` | Prompt injection, jailbreaks, malicious input |
+| **Redact PII** | `redactPII(text)` | Emails, phones, SSNs, credit cards, API keys |
+| **Fix broken JSON** | `repairJSON(broken)` | Missing brackets, trailing commas, unquoted keys |
+| **Monitor health** | `monitorLLM(client)` | Latency spikes, token drift, behavioral changes |
+| **Sentinel tests** | `sentinel.quick(client, model)` | LLM regressions before users see them |
+| **Classify output** | `classify(response)` | Intent detection, content categorization |
+| **Audit trail** | `audit.log(event)` | SOC2, HIPAA, GDPR compliance evidence |
+
+**Everything runs locally. No data leaves your machine. No API keys needed for free tier.**
 
 ---
 
@@ -18,21 +51,59 @@ npm install llmverify
 
 ---
 
-## Quick Start
+## Quick Start (30 seconds)
 
-### For IDE Users (Windsurf, VS Code, Cursor)
+```javascript
+const { verify, isInputSafe, redactPII } = require('llmverify');
 
-```bash
-# Terminal 1: Start server
-npm run serve
+// 1. Check user input before sending to AI
+if (!isInputSafe(userMessage)) {
+  return { error: 'Invalid input detected' };
+}
 
-# Terminal 2: Start monitor
-npm run monitor
+// 2. Get AI response (your existing code)
+const aiResponse = await yourLLM.generate(userMessage);
 
-# Copy AI responses → See verification scores automatically
+// 3. Verify the output before showing to users
+const result = await verify(aiResponse);
+
+if (result.risk.level === 'critical') {
+  return { error: 'Response failed safety check' };
+}
+
+// 4. Redact any PII before logging
+const { redacted } = redactPII(aiResponse);
+console.log(redacted); // "Contact [EMAIL_REDACTED] at [PHONE_REDACTED]"
 ```
 
-**Troubleshooting:** Port conflict? Run `npm run serve:force`
+That's it. Three lines of safety between your LLM and your users.
+
+---
+
+## For IDE Users (Windsurf, VS Code, Cursor)
+
+llmverify includes a REST server and clipboard monitor for real-time verification inside your IDE.
+
+```bash
+# Terminal 1: Start verification server
+npm run serve
+
+# Terminal 2: Start clipboard monitor
+npm run monitor
+
+# Now copy any AI response → see risk scores automatically
+```
+
+**Port conflict?** Run `npm run serve:force`
+
+You can also use the programmatic IDE extension:
+
+```javascript
+import { LLMVerifyIDE, createIDEExtension } from 'llmverify';
+
+const ide = new LLMVerifyIDE({ useLocalFallback: true });
+const result = await ide.verify(clipboardText);
+```
 
 [Full IDE Setup Guide →](QUICK-START.md)
 
@@ -42,18 +113,20 @@ npm run monitor
 
 ### 1. Verify AI Output
 
-**What it does:** Checks AI responses for safety, accuracy, and quality  
-**When to use:** Before showing AI content to users  
-**Benefit:** Catch hallucinations, security issues, and PII
+Checks AI responses for safety, accuracy, and quality before showing to users.
 
 ```javascript
 const { verify } = require('llmverify');
 
+// Object form
+const result = await verify({ content: aiResponse });
+
+// String shorthand (same thing)
 const result = await verify(aiResponse);
 
-console.log(result.result.risk.level);     // "low", "moderate", "high", "critical"
-console.log(result.result.risk.overall);   // 0.172 (17.2%)
-console.log(result.summary.verdict);       // "[PASS] SAFE TO USE"
+console.log(result.risk.level);   // "low", "moderate", "high", "critical"
+console.log(result.risk.overall); // 0.172 (17.2% risk)
+console.log(result.limitations);  // What wasn't checked (transparency)
 ```
 
 **Risk Levels:**
@@ -453,114 +526,33 @@ Create `.llmverify.json` in your project:
 
 ---
 
-## Documentation
-
-### Getting Started
-- [Quick Start Guide](QUICK-START.md) - IDE setup in 5 minutes
-- [Integration Guide](docs/INTEGRATION-GUIDE.md) - Add to your app
-- [API Reference](docs/API-REFERENCE.md) - Complete API docs
-
-### Understanding Results
-- [Risk Levels](docs/RISK-LEVELS.md) - What scores mean
-- [Findings Explained](docs/FINDINGS-EXPLAINED.md) - Common issues
-
-### Troubleshooting
-- [Error Guide](docs/ERROR-GUIDE.md) - Fix common errors
-- [Troubleshooting](docs/TROUBLESHOOTING.md) - Advanced debugging
-
-### For AI Assistants
-- [AI Guide](AI-GUIDE.md) - Help users with llmverify
-
----
-
-## Why llmverify?
-
-### Security
-- Detect prompt injection attacks
-- Prevent data leaks
-- Block malicious content
-- Validate all inputs/outputs
-
-### Quality
-- Catch hallucinations
-- Ensure consistency
-- Verify factual claims
-- Improve reliability
-
-### Compliance
-- GDPR/CCPA ready
-- Audit trails
-- PII protection
-- SOC2 compatible
-
-### Privacy
-- 100% local processing
-- No data leaves your machine
-- No telemetry
-- Open source
-
----
-
-## Performance
-
-- **Verification:** <100ms for typical responses
-- **PII Detection:** <50ms
-- **Input Validation:** <10ms
-- **Memory:** <50MB baseline
-
----
-
-## Requirements
-
-- **Node.js:** ≥18.0.0
-- **OS:** Windows, Linux, macOS
-- **Memory:** 512MB minimum
-- **Disk:** 50MB
-
----
-
-## Support
-
-- **Issues:** [GitHub Issues](https://github.com/subodhkc/llmverify-npm/issues)
-- **Docs:** [Full Documentation](docs/)
-- **Examples:** [/examples](examples/)
-
----
-
-## License
-
-MIT License - See [LICENSE](LICENSE) for details
-
----
-
-## Pricing & Tiers (v1.5.0)
+## Pricing & Tiers
 
 All features available on every tier. Usage tracked locally — no data leaves your machine.
 
 | Tier | Price | Daily Calls | Content Limit | Support |
 |------|-------|-------------|---------------|---------|
-| **Free** | $0 | 100/day | 50KB | Community |
+| **Free** | $0 | 500/day | 50KB | Community |
 | **Starter** | $79/mo | 5,000/day | 200KB | Email (72hr) |
 | **Pro** | $299/mo | 50,000/day | 1MB | Email (24hr) |
 | **Business** | $999/mo | Unlimited | Unlimited | Slack (4hr SLA) |
 
 ```bash
-# Check your usage
+# Check your usage anytime
 npx llmverify usage
 
 # See current tier and limits
 npx llmverify tier
 ```
 
-All calls share a single daily pool: verify, guard, safe, parse, sentinel, monitor.
+All calls share a single daily pool: verify, guard, safe, parse, sentinel, monitor.  
+Usage resets at midnight local time. A 10% grace period lets you finish work without hard cutoffs.
 
 ---
 
-## Sentinel Tests (v1.5.0)
+## Sentinel Tests
 
-**What it does:** Proactive behavioral tests that verify your LLM is responding correctly  
-**When to use:** CI/CD pipelines, health checks, before deployment  
-**Benefit:** Catch LLM regressions before users do
+Proactive behavioral tests that verify your LLM is responding correctly — run in CI/CD, health checks, or before deployment.
 
 ```javascript
 const { sentinel } = require('llmverify');
@@ -574,19 +566,17 @@ console.log(suite.passRate);  // 0.75 = 3/4 passed
 const echo = await sentinel.test('staticEchoTest', myClient, 'gpt-4');
 ```
 
-**Tests:**
-- Static Echo — Does the LLM echo back exact content?
-- Duplicate Query — Are responses consistent?
-- Structured List — Can it follow output instructions?
-- Short Reasoning — Does it show reasoning?
+**Built-in tests:**
+- **Static Echo** — Does the LLM echo back exact content?
+- **Duplicate Query** — Are responses consistent across identical prompts?
+- **Structured List** — Can it follow output format instructions?
+- **Short Reasoning** — Does it show step-by-step reasoning?
 
 ---
 
-## Health Monitoring (v1.5.0)
+## Health Monitoring
 
-**What it does:** Wraps any LLM client with real-time health monitoring  
-**When to use:** Production monitoring, detecting degradation  
-**Benefit:** Detect latency spikes, token rate changes, behavioral drift
+Wraps any LLM client with real-time health tracking. Detects latency spikes, token drift, and behavioral changes automatically.
 
 ```javascript
 const { monitorLLM } = require('llmverify');
@@ -605,7 +595,74 @@ console.log(response.llmverify.health);  // 'stable' | 'degraded' | 'unstable'
 
 ---
 
-## DX Improvements (v1.5.0)
+## LLM Provider Adapters
+
+Unified interface for any LLM provider. Swap providers without changing your verification code.
+
+```javascript
+const { createAdapter, monitorLLM } = require('llmverify');
+
+// Works with OpenAI, Anthropic, Groq, Google, DeepSeek, Mistral, Cohere, local models
+const client = createAdapter('openai', { apiKey: process.env.OPENAI_API_KEY });
+const monitored = monitorLLM(client);
+
+const response = await monitored.generate({ prompt: 'Hello', model: 'gpt-4' });
+```
+
+---
+
+## Plugin System
+
+Extend llmverify with custom verification rules.
+
+```javascript
+const { use, createPlugin, createRegexPlugin } = require('llmverify');
+
+// Built-in plugin helpers
+use(createRegexPlugin('no-urls', /https?:\/\/\S+/g, 'URL detected in output'));
+
+// Custom plugin
+use(createPlugin('custom-check', async (ctx) => {
+  const hasBadWord = ctx.content.includes('forbidden');
+  return { passed: !hasBadWord, message: hasBadWord ? 'Forbidden word found' : 'Clean' };
+}));
+```
+
+---
+
+## Error Handling
+
+Every error includes a code, severity, recoverability flag, and a human-readable suggestion.
+
+```javascript
+const { verify, LLMVerifyError } = require('llmverify');
+
+try {
+  const result = await verify(aiResponse);
+} catch (err) {
+  if (err instanceof LLMVerifyError) {
+    console.log(err.code);                // "LLMVERIFY_1003"
+    console.log(err.metadata.severity);   // "medium"
+    console.log(err.metadata.recoverable); // true
+    console.log(err.metadata.suggestion); // "Reduce content size or split into smaller chunks"
+  }
+}
+```
+
+**Error code ranges:**
+- **1xxx** — Input validation (empty, too large, bad format)
+- **2xxx** — Configuration (malformed config, invalid tier)
+- **3xxx** — Runtime (timeout, engine failure)
+- **4xxx** — Server (port in use, rate limit)
+- **5xxx** — Privacy/security (privacy violation, unauthorized)
+- **6xxx** — Plugins (not found, load failed)
+- **7xxx** — Usage/tier (daily limit, content length)
+
+All errors are typed — use `instanceof` checks or the `code` property for programmatic handling.
+
+---
+
+## DX Shortcuts
 
 ```javascript
 // String shorthand — no object wrapper needed
@@ -615,10 +672,31 @@ const result = await verify("The Earth is flat.");
 import llmverify from 'llmverify';
 const result = await llmverify.verify(text);
 
-// IDE extension with local fallback
-import { LLMVerifyIDE } from 'llmverify';
-const ide = new LLMVerifyIDE({ useLocalFallback: true });
+// Shorthand APIs
+import { ai, llm, guardrails } from 'llmverify';
+const safe = await ai.safe(text);       // returns text or null
+const guard = await ai.guard(text);     // returns { ok, risk, findings }
+const score = ai.riskScore(text);       // injection risk 0-1
 ```
+
+---
+
+## Performance
+
+- **Verification:** <100ms for typical responses
+- **PII Detection:** <50ms
+- **Input Validation:** <10ms
+- **Memory:** <50MB baseline
+- **Bundle:** No heavy ML models — pattern-based, runs anywhere Node runs
+
+---
+
+## Requirements
+
+- **Node.js:** ≥18.0.0
+- **OS:** Windows, Linux, macOS
+- **Memory:** 512MB minimum
+- **Disk:** 50MB
 
 ---
 
@@ -632,11 +710,41 @@ const ide = new LLMVerifyIDE({ useLocalFallback: true });
 | Remove PII | `redactPII()` | `redactPII(text)` |
 | Fix JSON | `repairJSON()` | `repairJSON(broken)` |
 | Classify | `classify()` | `await classify(response)` |
-| Monitor | `monitorLLM()` | `monitorLLM(client)` |
-| Sentinel | `sentinel.quick()` | `await sentinel.quick(client, model)` |
+| Monitor health | `monitorLLM()` | `monitorLLM(client)` |
+| Sentinel tests | `sentinel.quick()` | `await sentinel.quick(client, model)` |
+| Guard (Zod-like) | `guard()` | `await guard(text)` |
+| Safe check | `safe()` | `await safe(text)` |
+| Plugin | `use()` | `use(createRegexPlugin(...))` |
 | Check usage | CLI | `npx llmverify usage` |
 | Audit | `audit.log()` | `audit.log(event)` |
 | Badge | `generateBadge()` | `generateBadge(result)` |
+| Adapter | `createAdapter()` | `createAdapter('openai', config)` |
+
+---
+
+## Documentation
+
+- [Quick Start Guide](QUICK-START.md) — IDE setup in 5 minutes
+- [Integration Guide](docs/INTEGRATION-GUIDE.md) — Add to your app
+- [API Reference](docs/API-REFERENCE.md) — Complete API docs
+- [Risk Levels](docs/RISK-LEVELS.md) — What scores mean
+- [Error Guide](docs/ERROR-GUIDE.md) — Fix common errors
+- [CLI Reference](docs/CLI-REFERENCE.md) — Command line tools
+- [AI Guide](AI-GUIDE.md) — Help AI assistants use llmverify
+
+---
+
+## Support
+
+- **Issues:** [GitHub Issues](https://github.com/subodhkc/llmverify-npm/issues)
+- **Docs:** [Full Documentation](docs/)
+- **Examples:** [/examples](examples/)
+
+---
+
+## License
+
+MIT License — See [LICENSE](LICENSE) for details.
 
 ---
 

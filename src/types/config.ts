@@ -27,7 +27,7 @@ export interface TierUsageLimits {
 
 export const TIER_USAGE_LIMITS: Record<Tier, TierUsageLimits> = {
   free: {
-    dailyCallLimit: 100,
+    dailyCallLimit: 500,
     maxContentLength: 51200,       // 50KB
     auditRetentionDays: 7,
     maxPlugins: 2,

@@ -89,7 +89,7 @@ ${c.cyan}${c.bright}║${c.reset}                                               
 ${c.cyan}${c.bright}║${c.reset}   ${c.bright}FREE TIER${c.reset}                                                                  ${c.cyan}${c.bright}║${c.reset}
 ${c.cyan}${c.bright}║${c.reset}   ${c.dim}─────────────────────────────────────────────────────────────────────${c.reset}   ${c.cyan}${c.bright}║${c.reset}
 ${c.cyan}${c.bright}║${c.reset}                                                                              ${c.cyan}${c.bright}║${c.reset}
-${c.cyan}${c.bright}║${c.reset}   ${c.green}100 calls/day${c.reset} • All features included • No account needed             ${c.cyan}${c.bright}║${c.reset}
+${c.cyan}${c.bright}║${c.reset}   ${c.green}500 calls/day${c.reset} • All features included • No account needed             ${c.cyan}${c.bright}║${c.reset}
 ${c.cyan}${c.bright}║${c.reset}   Check usage:  ${c.green}npx llmverify usage${c.reset}                                       ${c.cyan}${c.bright}║${c.reset}
 ${c.cyan}${c.bright}║${c.reset}   Upgrade:      ${c.blue}https://haiec.com/llmverify/pricing${c.reset}                        ${c.cyan}${c.bright}║${c.reset}
 ${c.cyan}${c.bright}║${c.reset}                                                                              ${c.cyan}${c.bright}║${c.reset}
