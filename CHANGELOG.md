@@ -5,6 +5,56 @@ All notable changes to llmverify will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-02-08
+
+### Added - Tier System & Usage Tracking
+- Local-only usage tracking via `~/.llmverify/usage.json` — no network calls, no telemetry
+- Four pricing tiers: `free` (100 calls/day), `starter` (5,000), `pro` (50,000), `business` (unlimited)
+- Soft cap with grace period (10% above limit) before hard block
+- New error codes: `LLMVERIFY_7001` (usage limit exceeded), `LLMVERIFY_7002` (content length exceeded)
+- `checkUsageLimit()` and `checkContentLength()` exported for programmatic access
+- `readUsage()` and `getUsageSummary()` for usage inspection
+- `TIER_USAGE_LIMITS` exported with per-tier limits (dailyCallLimit, maxContentLength, auditRetentionDays, maxPlugins, customPatterns)
+- Usage warnings injected into `verify()` result when approaching daily limit
+- Postinstall banner now shows free tier info and `npx llmverify usage` command
+
+### Added - Sentinel Simple API
+- `sentinel.quick(client, model)` — one-liner to run all 4 sentinel tests
+- `sentinel.test(name, client, model)` — run a single sentinel test by name
+- `sentinel.runAll` — re-export of `runAllSentinelTests` for convenience
+
+### Added - Typed Interfaces
+- `AiShorthand` interface for the `ai` and `llm` shorthand objects
+- `GuardrailsAPI` interface for the `guardrails` compatibility object
+
+### Fixed
+- `server.ts`: express import now uses dynamic `require()` with helpful error message if express is not installed (was crashing when express was in optionalDependencies)
+- `validatePrivacyCompliance`: updated tier reference from "Team" to "Starter"
+- `INVALID_TIER` error suggestion updated to use new tier names (free, starter, pro, business)
+
+### Changed
+- Tier names renamed: `team` → `starter`, `professional` → `pro`, `enterprise` → `business`
+- `TIER_LIMITS` performance values now match `TIER_USAGE_LIMITS` content length caps
+
+## [1.4.2] - 2026-02-08
+
+### Added - Developer Experience
+- `verify()` now accepts a plain string: `verify("text")` is shorthand for `verify({ content: "text" })`
+- Default export: `import llmverify from 'llmverify'` now works (exports the `ai` shorthand object)
+- IDE extension local fallback: when server is unavailable, `LLMVerifyIDE.verify()` falls back to local `verify()` automatically (new `useLocalFallback` option, defaults to `true`)
+
+### Fixed
+- `validateConfig()` was checking wrong property paths (`config.maxContentLength` instead of `config.performance?.maxContentLength`, `config.verbose` instead of `config.output?.verbose`)
+- Moved `express` from `dependencies` to `optionalDependencies` (saves ~2MB for library-only users)
+
+## [1.4.1] - 2026-02-08
+
+### Fixed - Packaging & Branding
+- Removed self-referencing dependency (`llmverify` listing itself in `dependencies`)
+- Fixed VERSION constants stuck at `1.0.0` in `constants.ts`, `postinstall.ts`, and `index.ts` JSDoc
+- Updated author from "KingCaliber Labs" to "HAIEC" across all source files and `package.json`
+- Updated homepage URL to point to documentation site
+
 ## [1.4.0] - 2024-12-04
 
 ### Added - Enterprise Features

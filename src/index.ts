@@ -60,7 +60,7 @@
  * @module llmverify
  * @author Haiec
  * @license MIT
- * @version 1.0.0
+ * @version 1.5.0
  */
 
 // Main verification function
@@ -320,6 +320,20 @@ export {
 } from './badge/generator';
 export type { BadgeConfig, BadgeVerification } from './badge/generator';
 
+// Sentinel Simple API
+export { sentinel } from './sentinel/simple';
+
 // IDE Extension
 export { LLMVerifyIDE, createIDEExtension } from './ide-extension';
 export type { VerificationResult } from './ide-extension';
+
+// Usage tracking
+export { readUsage, incrementUsage, getUsageSummary, checkUsageLimit, checkContentLength } from './usage';
+export type { UsageData, UsageLimitResult } from './usage';
+
+// Tier usage limits
+export { TIER_USAGE_LIMITS } from './types/config';
+export type { TierUsageLimits } from './types/config';
+
+// Default export — enables `import llmverify from 'llmverify'`
+export { ai as default } from './compat';

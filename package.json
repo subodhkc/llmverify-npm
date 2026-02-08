@@ -1,6 +1,6 @@
 {
   "name": "llmverify",
-  "version": "1.4.1",
+  "version": "1.5.0",
   "description": "AI Output Verification Toolkit — Local-first LLM safety, hallucination detection, PII redaction, prompt injection defense, and runtime monitoring. Zero telemetry. OWASP LLM Top 10 aligned.",
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -99,7 +99,7 @@
     "gpt",
     "claude"
   ],
-  "author": "KingCaliber Labs",
+  "author": "HAIEC",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -108,7 +108,7 @@
   "bugs": {
     "url": "https://github.com/subodhkc/llmverify-npm/issues"
   },
-  "homepage": "https://github.com/subodhkc/llmverify-npm#readme",
+  "homepage": "https://haiec.com/llmverify/docs",
   "funding": {
     "type": "individual",
     "url": "https://www.buymeacoffee.com/subodhkc"
@@ -129,9 +129,10 @@
     "chalk": "^4.1.2",
     "cli-table3": "^0.6.3",
     "commander": "^11.1.0",
-    "express": "^4.18.2",
-    "llmverify": "^1.4.0",
     "uuid": "^9.0.1"
+  },
+  "optionalDependencies": {
+    "express": "^4.18.2"
   },
   "peerDependencies": {
     "@langchain/core": ">=0.1.0",

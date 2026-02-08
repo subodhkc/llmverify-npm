@@ -13,6 +13,8 @@ import { staticEchoTest } from './staticEchoTest';
 import { duplicateQueryTest } from './duplicateQueryTest';
 import { structuredListTest } from './structuredListTest';
 import { shortReasoningTest } from './shortReasoningTest';
+import { incrementUsage, checkUsageLimit } from '../usage';
+import { Tier } from '../types/config';
 
 /**
  * Aggregated sentinel test suite results.
@@ -67,6 +69,23 @@ export async function runAllSentinelTests(
   const start = Date.now();
   const results: SentinelTestResult[] = [];
   const skipTests = new Set(options?.skipTests || []);
+  
+  // Usage tracking — counts as one call per suite run
+  const tier = ((config as any).tier || 'free') as Tier;
+  const usageCheck = checkUsageLimit(tier);
+  if (!usageCheck.allowed) {
+    return {
+      passed: false,
+      passedCount: 0,
+      totalCount: 0,
+      passRate: 0,
+      results: [],
+      timestamp: start,
+      durationMs: 0,
+      summary: usageCheck.warning || 'Daily usage limit exceeded. Upgrade: https://haiec.com/llmverify/pricing'
+    };
+  }
+  incrementUsage('sentinel', tier);
 
   // Define test runners
   const tests: Array<{ name: string; run: () => Promise<SentinelTestResult> }> = [

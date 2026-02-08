@@ -3,6 +3,8 @@
  * Auto-verify AI responses in real-time
  */
 
+import { verify as localVerify } from './verify';
+
 export interface VerificationResult {
   verdict: string;
   riskLevel: string;
@@ -14,10 +16,12 @@ export interface VerificationResult {
 export class LLMVerifyIDE {
   private serverUrl: string;
   private enabled: boolean;
+  private useLocalFallback: boolean;
   
-  constructor(serverUrl: string = 'http://localhost:9009') {
+  constructor(serverUrl: string = 'http://localhost:9009', options?: { useLocalFallback?: boolean }) {
     this.serverUrl = serverUrl;
     this.enabled = true;
+    this.useLocalFallback = options?.useLocalFallback ?? true;
   }
   
   /**
@@ -70,10 +74,52 @@ export class LLMVerifyIDE {
       };
       
     } catch (error: any) {
-      throw new Error(`Verification failed: ${error.message}`);
+      if (this.useLocalFallback) {
+        return this.verifyLocal(content);
+      }
+      throw new Error(`Verification failed: ${error.message}. Tip: Start server with 'npx llmverify-serve' or enable local fallback.`);
     }
   }
   
+  /**
+   * Local fallback verification (no server required)
+   */
+  private async verifyLocal(content: string): Promise<VerificationResult> {
+    const result = await localVerify({ content });
+    const risk = result.risk;
+    const score = Math.round(risk.overall * 100 * 10) / 10;
+
+    let verdict = '';
+    let safe = false;
+
+    switch (risk.level) {
+      case 'low':
+        verdict = '[PASS] SAFE TO USE (local)';
+        safe = true;
+        break;
+      case 'moderate':
+        verdict = '[WARN] REVIEW RECOMMENDED (local)';
+        safe = false;
+        break;
+      case 'high':
+        verdict = '[FAIL] HIGH RISK (local)';
+        safe = false;
+        break;
+      case 'critical':
+        verdict = '[BLOCK] CRITICAL RISK (local)';
+        safe = false;
+        break;
+    }
+
+    return {
+      verdict,
+      riskLevel: risk.level.toUpperCase(),
+      riskScore: score,
+      explanation: risk.interpretation,
+      safe
+    };
+  }
+
   /**
    * Format result for inline display
    */

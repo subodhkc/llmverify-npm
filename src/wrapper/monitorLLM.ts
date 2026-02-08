@@ -41,6 +41,8 @@ import { FingerprintEngine, extractFingerprint } from '../engines/runtime/finger
 import { StructureEngine } from '../engines/runtime/structure';
 import { HealthScoreEngine } from '../engines/runtime/health-score';
 import { LlmClient, LlmRequest, LlmResponse } from '../adapters/types';
+import { incrementUsage, checkUsageLimit } from '../usage';
+import { Tier } from '../types/config';
 
 /**
  * Generic LLM client interface (legacy).
@@ -170,6 +172,14 @@ export function monitorLLM(
 
   return {
     async generate(opts: GenerateOptions): Promise<MonitoredResponse> {
+      // Usage tracking — counts each generate() call
+      const tier = ((config as any).tier || 'free') as Tier;
+      const usageCheck = checkUsageLimit(tier);
+      if (!usageCheck.allowed) {
+        throw new Error(usageCheck.warning || 'Daily usage limit exceeded. Upgrade: https://haiec.com/llmverify/pricing');
+      }
+      incrementUsage('monitor', tier);
+      
       const start = Date.now();
       
       // Call original client

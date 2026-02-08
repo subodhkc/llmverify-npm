@@ -166,10 +166,9 @@ export function createDefaultConfigFile(outputPath?: string): string {
  * Validate config structure
  */
 export function validateConfig(config: any): config is Config {
-  return (
-    typeof config === 'object' &&
-    typeof config.tier === 'string' &&
-    typeof config.maxContentLength === 'number' &&
-    typeof config.verbose === 'boolean'
-  );
+  if (typeof config !== 'object' || config === null) return false;
+  if (config.tier !== undefined && typeof config.tier !== 'string') return false;
+  if (config.performance?.maxContentLength !== undefined && typeof config.performance.maxContentLength !== 'number') return false;
+  if (config.output?.verbose !== undefined && typeof config.output.verbose !== 'boolean') return false;
+  return true;
 }

@@ -533,16 +533,108 @@ MIT License - See [LICENSE](LICENSE) for details
 
 ---
 
+## Pricing & Tiers (v1.5.0)
+
+All features available on every tier. Usage tracked locally — no data leaves your machine.
+
+| Tier | Price | Daily Calls | Content Limit | Support |
+|------|-------|-------------|---------------|---------|
+| **Free** | $0 | 100/day | 50KB | Community |
+| **Starter** | $79/mo | 5,000/day | 200KB | Email (72hr) |
+| **Pro** | $299/mo | 50,000/day | 1MB | Email (24hr) |
+| **Business** | $999/mo | Unlimited | Unlimited | Slack (4hr SLA) |
+
+```bash
+# Check your usage
+npx llmverify usage
+
+# See current tier and limits
+npx llmverify tier
+```
+
+All calls share a single daily pool: verify, guard, safe, parse, sentinel, monitor.
+
+---
+
+## Sentinel Tests (v1.5.0)
+
+**What it does:** Proactive behavioral tests that verify your LLM is responding correctly  
+**When to use:** CI/CD pipelines, health checks, before deployment  
+**Benefit:** Catch LLM regressions before users do
+
+```javascript
+const { sentinel } = require('llmverify');
+
+// One-liner — runs all 4 sentinel tests
+const suite = await sentinel.quick(myClient, 'gpt-4');
+console.log(suite.passed);    // true/false
+console.log(suite.passRate);  // 0.75 = 3/4 passed
+
+// Run a single test
+const echo = await sentinel.test('staticEchoTest', myClient, 'gpt-4');
+```
+
+**Tests:**
+- Static Echo — Does the LLM echo back exact content?
+- Duplicate Query — Are responses consistent?
+- Structured List — Can it follow output instructions?
+- Short Reasoning — Does it show reasoning?
+
+---
+
+## Health Monitoring (v1.5.0)
+
+**What it does:** Wraps any LLM client with real-time health monitoring  
+**When to use:** Production monitoring, detecting degradation  
+**Benefit:** Detect latency spikes, token rate changes, behavioral drift
+
+```javascript
+const { monitorLLM } = require('llmverify');
+
+const monitored = monitorLLM(openaiClient, {
+  hooks: {
+    onUnstable: (report) => alert('LLM unstable!'),
+    onDegraded: (report) => console.warn('Degraded'),
+    onRecovery: (report) => console.log('Recovered')
+  }
+});
+
+const response = await monitored.generate({ prompt: 'Hello' });
+console.log(response.llmverify.health);  // 'stable' | 'degraded' | 'unstable'
+```
+
+---
+
+## DX Improvements (v1.5.0)
+
+```javascript
+// String shorthand — no object wrapper needed
+const result = await verify("The Earth is flat.");
+
+// Default export
+import llmverify from 'llmverify';
+const result = await llmverify.verify(text);
+
+// IDE extension with local fallback
+import { LLMVerifyIDE } from 'llmverify';
+const ide = new LLMVerifyIDE({ useLocalFallback: true });
+```
+
+---
+
 ## Quick Reference
 
 | Task | Function | Example |
 |------|----------|---------|
 | Verify AI output | `verify()` | `await verify(response)` |
+| Verify (string) | `verify()` | `await verify("text")` |
 | Check input | `isInputSafe()` | `isInputSafe(message)` |
 | Remove PII | `redactPII()` | `redactPII(text)` |
 | Fix JSON | `repairJSON()` | `repairJSON(broken)` |
 | Classify | `classify()` | `await classify(response)` |
-| Monitor | `monitor.track()` | `monitor.track(metrics)` |
+| Monitor | `monitorLLM()` | `monitorLLM(client)` |
+| Sentinel | `sentinel.quick()` | `await sentinel.quick(client, model)` |
+| Check usage | CLI | `npx llmverify usage` |
 | Audit | `audit.log()` | `audit.log(event)` |
 | Badge | `generateBadge()` | `generateBadge(result)` |
 

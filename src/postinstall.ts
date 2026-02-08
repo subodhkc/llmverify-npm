@@ -4,11 +4,11 @@
  * Displays a rich, informative banner after npm install
  * 
  * @module postinstall
- * @author KingCaliber Labs
+ * @author HAIEC
  * @license MIT
  */
 
-const VERSION = '1.0.0';
+const VERSION = '1.5.0';
 
 // ANSI color codes (works in most terminals)
 const colors = {
@@ -86,12 +86,21 @@ ${c.cyan}${c.bright}║${c.reset}   ${c.yellow}☕ Support${c.reset}  https://ww
 ${c.cyan}${c.bright}║${c.reset}                                                                              ${c.cyan}${c.bright}║${c.reset}
 ${c.cyan}${c.bright}╠══════════════════════════════════════════════════════════════════════════════╣${c.reset}
 ${c.cyan}${c.bright}║${c.reset}                                                                              ${c.cyan}${c.bright}║${c.reset}
+${c.cyan}${c.bright}║${c.reset}   ${c.bright}FREE TIER${c.reset}                                                                  ${c.cyan}${c.bright}║${c.reset}
+${c.cyan}${c.bright}║${c.reset}   ${c.dim}─────────────────────────────────────────────────────────────────────${c.reset}   ${c.cyan}${c.bright}║${c.reset}
+${c.cyan}${c.bright}║${c.reset}                                                                              ${c.cyan}${c.bright}║${c.reset}
+${c.cyan}${c.bright}║${c.reset}   ${c.green}100 calls/day${c.reset} • All features included • No account needed             ${c.cyan}${c.bright}║${c.reset}
+${c.cyan}${c.bright}║${c.reset}   Check usage:  ${c.green}npx llmverify usage${c.reset}                                       ${c.cyan}${c.bright}║${c.reset}
+${c.cyan}${c.bright}║${c.reset}   Upgrade:      ${c.blue}https://haiec.com/llmverify/pricing${c.reset}                        ${c.cyan}${c.bright}║${c.reset}
+${c.cyan}${c.bright}║${c.reset}                                                                              ${c.cyan}${c.bright}║${c.reset}
+${c.cyan}${c.bright}╠══════════════════════════════════════════════════════════════════════════════╣${c.reset}
+${c.cyan}${c.bright}║${c.reset}                                                                              ${c.cyan}${c.bright}║${c.reset}
 ${c.cyan}${c.bright}║${c.reset}   ${c.green}[LOCK] PRIVACY${c.reset}  100% local • Zero network requests • Zero telemetry         ${c.cyan}${c.bright}║${c.reset}
 ${c.cyan}${c.bright}║${c.reset}   ${c.green}[OK] VERIFIED${c.reset}  Run tcpdump while using — you'll see nothing                ${c.cyan}${c.bright}║${c.reset}
 ${c.cyan}${c.bright}║${c.reset}                                                                              ${c.cyan}${c.bright}║${c.reset}
 ${c.cyan}${c.bright}╚══════════════════════════════════════════════════════════════════════════════╝${c.reset}
 
-${c.dim}Maintained by KingCaliber Labs • MIT License${c.reset}
+${c.dim}Maintained by HAIEC • MIT License${c.reset}
 `;
 
   console.log(banner);

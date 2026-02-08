@@ -5,7 +5,7 @@
  * Run all engines with a single command using preset configurations.
  * 
  * @module core
- * @author KingCaliber Labs
+ * @author HAIEC
  * @license MIT
  */
 

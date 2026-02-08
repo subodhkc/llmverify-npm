@@ -7,11 +7,24 @@
  * Provides REST endpoints for AI output verification.
  * 
  * @module server
- * @author KingCaliber Labs
+ * @author HAIEC
  * @license MIT
  */
 
-import express, { Request, Response } from 'express';
+let express: any;
+try {
+  express = require('express');
+} catch {
+  console.error(
+    '\n[llmverify] express is required for server mode but is not installed.\n' +
+    'Install it with: npm install express\n' +
+    'express is an optional dependency — only needed for `npx llmverify-serve`.\n'
+  );
+  process.exit(1);
+}
+type Request = import('express').Request;
+type Response = import('express').Response;
+
 import { verify } from './verify';
 import { isInputSafe, redactPII, containsPII } from './csm6/security';
 import { classify } from './engines/classification';
@@ -126,7 +139,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // CORS for local development
-app.use((req, res, next) => {
+app.use((req: any, res: any, next: any) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type');

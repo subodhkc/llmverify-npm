@@ -285,6 +285,33 @@ export const guardrails = {
 // ============================================================================
 
 /**
+ * Typed interface for the `ai` and `llm` shorthand objects.
+ */
+export interface AiShorthand {
+  verify: (content: string) => Promise<VerifyResult>;
+  guard: (content: string) => Promise<GuardResult>;
+  safe: (content: string) => Promise<string | null>;
+  parse: (content: string) => Promise<VerifyResult>;
+  isSafe: typeof isInputSafe;
+  hasPII: typeof containsPII;
+  sanitize: typeof sanitizePromptInjection;
+  redact: typeof redactPII;
+  riskScore: typeof getInjectionRiskScore;
+  piiScore: typeof getPIIRiskScore;
+}
+
+/**
+ * Typed interface for the `guardrails` compatibility object.
+ */
+export interface GuardrailsAPI {
+  check: (content: string) => Promise<boolean>;
+  sanitize: (content: string) => { clean: string; threats: string[] };
+  redact: (content: string) => { clean: string; piiCount: number };
+  riskScore: (content: string) => Promise<number>;
+  verify: (content: string) => Promise<VerifyResult>;
+}
+
+/**
  * AI verification shorthand — one-liner API
  * 
  * @example
@@ -295,7 +322,7 @@ export const guardrails = {
  * const isSafe = ai.isSafe(text);
  * const clean = ai.redact(text);
  */
-export const ai = {
+export const ai: AiShorthand = {
   verify: (content: string) => verify({ content }),
   guard: (content: string) => guard(content),
   safe: (content: string) => safe(content),

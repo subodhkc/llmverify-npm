@@ -6,7 +6,55 @@
  * @license MIT
  */
 
-export type Tier = 'free' | 'team' | 'professional' | 'enterprise';
+export type Tier = 'free' | 'starter' | 'pro' | 'business';
+
+/**
+ * Usage limits per tier — enforced locally via ~/.llmverify/usage.json
+ * All features available on all tiers; only volume is capped.
+ */
+export interface TierUsageLimits {
+  /** Max API calls per day (verify, guard, safe, parse, sentinel, monitor) */
+  dailyCallLimit: number;
+  /** Max content length per call in bytes */
+  maxContentLength: number;
+  /** Audit log retention in days */
+  auditRetentionDays: number;
+  /** Max custom plugins */
+  maxPlugins: number;
+  /** Custom patterns allowed */
+  customPatterns: boolean;
+}
+
+export const TIER_USAGE_LIMITS: Record<Tier, TierUsageLimits> = {
+  free: {
+    dailyCallLimit: 100,
+    maxContentLength: 51200,       // 50KB
+    auditRetentionDays: 7,
+    maxPlugins: 2,
+    customPatterns: false
+  },
+  starter: {
+    dailyCallLimit: 5000,
+    maxContentLength: 204800,      // 200KB
+    auditRetentionDays: 30,
+    maxPlugins: 10,
+    customPatterns: true
+  },
+  pro: {
+    dailyCallLimit: 50000,
+    maxContentLength: 1048576,     // 1MB
+    auditRetentionDays: 90,
+    maxPlugins: Infinity,
+    customPatterns: true
+  },
+  business: {
+    dailyCallLimit: Infinity,
+    maxContentLength: Infinity,
+    auditRetentionDays: Infinity,
+    maxPlugins: Infinity,
+    customPatterns: true
+  }
+};
 
 export interface EngineConfig {
   enabled: boolean;
@@ -116,32 +164,32 @@ export const DEFAULT_CONFIG: Config = {
 export const TIER_LIMITS: Record<Tier, Partial<Config>> = {
   free: {
     performance: {
-      maxContentLength: 1000000, // 1MB - local processing has no artificial limits
+      maxContentLength: 51200, // 50KB
       timeout: 30000,
       cacheEnabled: true,
       cacheTTL: 3600
     }
   },
   
-  team: {
+  starter: {
     performance: {
-      maxContentLength: 1000000, // 1MB
+      maxContentLength: 204800, // 200KB
       timeout: 60000,
       cacheEnabled: true,
       cacheTTL: 7200
     }
   },
   
-  professional: {
+  pro: {
     performance: {
-      maxContentLength: 1000000, // 1MB
+      maxContentLength: 1048576, // 1MB
       timeout: 120000,
       cacheEnabled: true,
       cacheTTL: 14400
     }
   },
   
-  enterprise: {
+  business: {
     performance: {
       maxContentLength: Infinity,
       timeout: 300000,

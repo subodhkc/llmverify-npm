@@ -44,7 +44,11 @@ export enum ErrorCode {
   PLUGIN_NOT_FOUND = 'LLMVERIFY_6001',
   PLUGIN_LOAD_FAILED = 'LLMVERIFY_6002',
   PLUGIN_EXECUTION_FAILED = 'LLMVERIFY_6003',
-  INVALID_PLUGIN = 'LLMVERIFY_6004'
+  INVALID_PLUGIN = 'LLMVERIFY_6004',
+  
+  // Usage/Tier errors (7xxx)
+  USAGE_LIMIT_EXCEEDED = 'LLMVERIFY_7001',
+  CONTENT_LENGTH_EXCEEDED = 'LLMVERIFY_7002'
 }
 
 /**
@@ -139,7 +143,7 @@ export const ERROR_METADATA: Record<ErrorCode, Omit<ErrorMetadata, 'timestamp' |
     severity: ErrorSeverity.MEDIUM,
     message: 'Invalid tier specified',
     recoverable: true,
-    suggestion: 'Use: free, team, professional, or enterprise'
+    suggestion: 'Use: free, starter, pro, or business'
   },
   
   // Runtime
@@ -253,6 +257,22 @@ export const ERROR_METADATA: Record<ErrorCode, Omit<ErrorMetadata, 'timestamp' |
     message: 'Invalid plugin structure',
     recoverable: true,
     suggestion: 'Ensure plugin implements required interface'
+  },
+  
+  // Usage/Tier
+  [ErrorCode.USAGE_LIMIT_EXCEEDED]: {
+    code: ErrorCode.USAGE_LIMIT_EXCEEDED,
+    severity: ErrorSeverity.MEDIUM,
+    message: 'Daily usage limit exceeded for your tier',
+    recoverable: true,
+    suggestion: 'Upgrade your plan at https://haiec.com/llmverify/pricing or wait until tomorrow'
+  },
+  [ErrorCode.CONTENT_LENGTH_EXCEEDED]: {
+    code: ErrorCode.CONTENT_LENGTH_EXCEEDED,
+    severity: ErrorSeverity.MEDIUM,
+    message: 'Content exceeds tier size limit',
+    recoverable: true,
+    suggestion: 'Reduce content size or upgrade your plan at https://haiec.com/llmverify/pricing'
   }
 };
 

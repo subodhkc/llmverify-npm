@@ -10,7 +10,7 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import { Config, DEFAULT_CONFIG, TIER_LIMITS } from './types/config';
+import { Config, DEFAULT_CONFIG, TIER_LIMITS, Tier } from './types/config';
 import { VerifyResult } from './types/results';
 import { VERSION } from './constants';
 import { PrivacyViolationError, ValidationError, VerificationError } from './errors';
@@ -25,6 +25,7 @@ import { getLogger } from './logging/logger';
 import { getAuditLogger } from './logging/audit';
 import { getBaselineStorage } from './baseline/storage';
 import { getPluginRegistry } from './plugins/registry';
+import { incrementUsage, checkUsageLimit, checkContentLength } from './usage';
 
 export interface VerifyOptions {
   content: string;
@@ -42,20 +43,27 @@ export interface VerifyOptions {
  * PRIVACY GUARANTEE: Free tier never makes network requests.
  * All processing is local unless explicit API key is provided.
  * 
- * @param options - Verification options
+ * @param options - Verification options or a plain string (shorthand for { content: string })
  * @returns Complete verification result with limitations
  * 
  * @example
  * ```typescript
+ * // Object form
  * const result = await verify({
  *   content: "The Earth is flat."
  * });
+ * 
+ * // String shorthand (same as above)
+ * const result = await verify("The Earth is flat.");
  * 
  * console.log(result.risk.level); // "moderate"
  * console.log(result.limitations); // ["Pattern-based detection only", ...]
  * ```
  */
-export async function verify(options: VerifyOptions): Promise<VerifyResult> {
+export async function verify(options: string | VerifyOptions): Promise<VerifyResult> {
+  if (typeof options === 'string') {
+    options = { content: options };
+  }
   const startTime = Date.now();
   const verificationId = uuidv4();
   
@@ -73,6 +81,27 @@ export async function verify(options: VerifyOptions): Promise<VerifyResult> {
   // Load config from file/env, then merge with runtime options
   const baseConfig = loadConfig(options.config);
   const config = mergeConfig(baseConfig);
+  
+  // Usage tracking — local only, no network calls
+  const tier = (config.tier || 'free') as Tier;
+  const usageLimitCheck = checkUsageLimit(tier);
+  if (!usageLimitCheck.allowed) {
+    throw new VerificationError(
+      usageLimitCheck.warning || 'Daily usage limit exceeded',
+      ErrorCode.USAGE_LIMIT_EXCEEDED
+    );
+  }
+  const contentLengthCheck = checkContentLength(
+    Buffer.byteLength(options.content, 'utf-8'),
+    tier
+  );
+  if (!contentLengthCheck.allowed) {
+    throw new VerificationError(
+      contentLengthCheck.warning || 'Content exceeds tier size limit',
+      ErrorCode.CONTENT_LENGTH_EXCEEDED
+    );
+  }
+  incrementUsage('verify', tier);
   
   // CRITICAL: Validate privacy compliance
   validatePrivacyCompliance(config);
@@ -243,6 +272,12 @@ export async function verify(options: VerifyOptions): Promise<VerifyResult> {
     });
   }
   
+  // Add usage warning if approaching/exceeding daily limit
+  const warnings: string[] = [];
+  if (usageLimitCheck.warning) {
+    warnings.push(usageLimitCheck.warning);
+  }
+  
   return {
     ...result,
     risk: result.risk!,
@@ -255,7 +290,8 @@ export async function verify(options: VerifyOptions): Promise<VerifyResult> {
       enginesUsed
     },
     limitations: result.limitations!,
-    notChecked: result.notChecked!
+    notChecked: result.notChecked!,
+    ...(warnings.length > 0 ? { warnings } : {})
   } as VerifyResult;
 }
 
@@ -311,7 +347,7 @@ function validatePrivacyCompliance(config: Config): void {
     throw new PrivacyViolationError(
       'Free tier cannot enable network requests. ' +
       'This is a privacy violation. ' +
-      'Upgrade to Team tier for ML-enhanced features.'
+      'Upgrade to Starter tier for ML-enhanced features.'
     );
   }
   
@@ -347,8 +383,8 @@ function validateInput(content: string, config: Config): void {
   }
   
   // Check reasonable content limits (prevent DoS)
-  const limits = TIER_LIMITS[config.tier];
-  const maxLength = limits.performance?.maxContentLength || 1000000;
+  const limits = TIER_LIMITS[config.tier as Tier];
+  const maxLength = limits?.performance?.maxContentLength || 1000000;
   if (content.length > maxLength) {
     throw new ValidationError(
       `Content exceeds maximum size (${maxLength.toLocaleString()} chars). ` +

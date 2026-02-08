@@ -218,7 +218,7 @@ program
     const info = {
       name: 'llmverify',
       version: VERSION,
-      maintainer: 'Subodh KC (KingCaliber Labs)',
+      maintainer: 'Subodh KC (HAIEC)',
       engines: [
         'classification (intent, hallucination, reasoning)',
         'CSM6 (security, PII, harmful content, injection)',
