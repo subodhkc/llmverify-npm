@@ -15,6 +15,7 @@ import chalk from 'chalk';
 import Table from 'cli-table3';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
 import { verify } from './verify';
 import { VERSION, PRIVACY_GUARANTEE } from './constants';
 import { Config, DEFAULT_CONFIG } from './types/config';
@@ -1259,5 +1260,342 @@ function printTextResult(result: VerifyResult, verbose: boolean): void {
   console.log(chalk.dim(`Latency: ${result.meta.latency_ms}ms | Version: ${result.meta.version}`));
   console.log();
 }
+
+// ============================================================================
+// COMMAND: connect (Opt-in dashboard connection)
+// ============================================================================
+
+const CONFIG_DIR = path.join(os.homedir(), '.llmverify');
+const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
+
+interface DashboardConfig {
+  apiKey?: string;
+  apiUrl?: string;
+  connectedAt?: string;
+  tier?: string;
+}
+
+function readDashboardConfig(): DashboardConfig {
+  try {
+    if (fs.existsSync(CONFIG_FILE)) {
+      return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'));
+    }
+  } catch {
+    // Corrupted config — return empty
+  }
+  return {};
+}
+
+function writeDashboardConfig(config: DashboardConfig): void {
+  try {
+    if (!fs.existsSync(CONFIG_DIR)) {
+      fs.mkdirSync(CONFIG_DIR, { recursive: true });
+    }
+    fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), { mode: 0o600 });
+  } catch (err) {
+    console.error(chalk.red(`Failed to write config: ${(err as Error).message}`));
+  }
+}
+
+program
+  .command('connect')
+  .description('Connect to HAIEC dashboard (opt-in, enables usage sync and tier upgrades)')
+  .argument('<apiKey>', 'Your HAIEC API key (get one at haiec.com/dashboard/api-keys)')
+  .option('--url <url>', 'API base URL', 'https://www.haiec.com')
+  .action(async (apiKey: string, options: { url: string }) => {
+    console.log(chalk.blue('\n🔗 Connecting to HAIEC Dashboard...\n'));
+
+    // Validate API key format
+    if (!/^haiec_(live|test)_[A-Za-z0-9_-]{20,}$/.test(apiKey)) {
+      console.error(chalk.red('Invalid API key format.'));
+      console.log(chalk.dim('Expected format: haiec_live_... or haiec_test_...'));
+      console.log(chalk.dim('Get a key at: https://www.haiec.com/dashboard/api-keys'));
+      process.exit(1);
+    }
+
+    // Verify key with server
+    try {
+      const res = await fetch(`${options.url}/api/llmverify/status`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'User-Agent': `llmverify-cli/${VERSION}`,
+        },
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        console.error(chalk.red(`Authentication failed: ${(body as any).error || res.statusText}`));
+        process.exit(1);
+      }
+
+      const data = await res.json() as { success: boolean; data?: { tier: string } };
+      if (!data.success) {
+        console.error(chalk.red('Server rejected the API key.'));
+        process.exit(1);
+      }
+
+      // Save config
+      const config = readDashboardConfig();
+      config.apiKey = apiKey;
+      config.apiUrl = options.url;
+      config.connectedAt = new Date().toISOString();
+      config.tier = (data.data as any)?.tier || 'free';
+      writeDashboardConfig(config);
+
+      console.log(chalk.green('[OK] Connected to HAIEC Dashboard'));
+      console.log(`  ${chalk.cyan('Tier:')}      ${config.tier}`);
+      console.log(`  ${chalk.cyan('API URL:')}   ${config.apiUrl}`);
+      console.log(`  ${chalk.cyan('Config:')}    ${CONFIG_FILE}`);
+      console.log();
+      console.log(chalk.dim('Your free tier still works 100% locally with zero network.'));
+      console.log(chalk.dim('Dashboard connection is opt-in — use "npx llmverify sync" to push usage.'));
+      console.log(chalk.dim('Use "npx llmverify disconnect" to remove the connection.'));
+      console.log();
+    } catch (err) {
+      console.error(chalk.red(`Connection failed: ${(err as Error).message}`));
+      console.log(chalk.dim('Check your network connection and API URL.'));
+      process.exit(1);
+    }
+  });
+
+// ============================================================================
+// COMMAND: disconnect
+// ============================================================================
+
+program
+  .command('disconnect')
+  .description('Remove HAIEC dashboard connection (reverts to 100% local mode)')
+  .action(() => {
+    const config = readDashboardConfig();
+
+    if (!config.apiKey) {
+      console.log(chalk.yellow('\nNot connected to any dashboard.'));
+      console.log();
+      return;
+    }
+
+    // Remove API key but keep other settings
+    delete config.apiKey;
+    delete config.connectedAt;
+    delete config.tier;
+    writeDashboardConfig(config);
+
+    console.log(chalk.green('\n[OK] Disconnected from HAIEC Dashboard'));
+    console.log(chalk.dim('All verification continues to work 100% locally.'));
+    console.log(chalk.dim('Your local usage data is unchanged.'));
+    console.log();
+  });
+
+// ============================================================================
+// COMMAND: sync (Push usage to dashboard)
+// ============================================================================
+
+program
+  .command('sync')
+  .description('Sync local usage data to HAIEC dashboard (requires connect first)')
+  .action(async () => {
+    const config = readDashboardConfig();
+
+    if (!config.apiKey || !config.apiUrl) {
+      console.error(chalk.red('\nNot connected to dashboard.'));
+      console.log(chalk.dim('Run: npx llmverify connect <API_KEY>'));
+      console.log();
+      process.exit(1);
+    }
+
+    console.log(chalk.blue('\n📤 Syncing usage to HAIEC Dashboard...\n'));
+
+    // Read local usage
+    const { readUsage } = require('./usage/tracker');
+    const usage = readUsage(config.tier || 'free');
+
+    try {
+      const res = await fetch(`${config.apiUrl}/api/llmverify/sync`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${config.apiKey}`,
+          'Content-Type': 'application/json',
+          'User-Agent': `llmverify-cli/${VERSION}`,
+        },
+        body: JSON.stringify({
+          packageVersion: VERSION,
+          tier: config.tier || 'free',
+          usage: {
+            date: usage.date,
+            totalCalls: usage.calls,
+            featureBreakdown: usage.breakdown,
+          },
+        }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        console.error(chalk.red(`Sync failed: ${(body as any).error || res.statusText}`));
+        process.exit(1);
+      }
+
+      const data = await res.json() as { success: boolean; data?: any };
+      if (!data.success) {
+        console.error(chalk.red('Sync rejected by server.'));
+        process.exit(1);
+      }
+
+      const result = data.data;
+
+      // Update local tier if server says different
+      if (result?.tierMismatch && result?.serverTier) {
+        config.tier = result.serverTier;
+        writeDashboardConfig(config);
+        console.log(chalk.yellow(`  Tier updated: ${result.serverTier} (from server)`));
+      }
+
+      console.log(chalk.green('[OK] Usage synced successfully'));
+      console.log(`  ${chalk.cyan('Date:')}       ${usage.date}`);
+      console.log(`  ${chalk.cyan('Calls:')}      ${usage.calls}`);
+      console.log(`  ${chalk.cyan('Tier:')}       ${result?.serverTier || config.tier}`);
+      if (result?.limits?.dailyCallLimit) {
+        console.log(`  ${chalk.cyan('Limit:')}      ${result.limits.dailyCallLimit}/day`);
+      }
+      console.log();
+    } catch (err) {
+      console.error(chalk.red(`Sync failed: ${(err as Error).message}`));
+      process.exit(1);
+    }
+  });
+
+// ============================================================================
+// COMMAND: status (Show connection and usage status)
+// ============================================================================
+
+program
+  .command('status')
+  .description('Show current tier, usage, and dashboard connection status')
+  .option('--json', 'Output as JSON')
+  .action((options: { json?: boolean }) => {
+    const config = readDashboardConfig();
+    const { readUsage } = require('./usage/tracker');
+    const usage = readUsage(config.tier || 'free');
+
+    const tierLimits: Record<string, number> = {
+      free: 500,
+      starter: 5000,
+      pro: 50000,
+      business: Infinity,
+      enterprise: Infinity,
+    };
+
+    const limit = tierLimits[config.tier || 'free'] || 500;
+    const remaining = Math.max(0, limit - usage.calls);
+    const pct = limit === Infinity ? 0 : Math.round((usage.calls / limit) * 100);
+
+    const status = {
+      connected: !!config.apiKey,
+      tier: config.tier || 'free',
+      usage: {
+        date: usage.date,
+        calls: usage.calls,
+        limit: limit === Infinity ? 'unlimited' : limit,
+        remaining: limit === Infinity ? 'unlimited' : remaining,
+        percentUsed: limit === Infinity ? 0 : pct,
+      },
+      breakdown: usage.breakdown,
+      dashboard: config.apiKey ? {
+        apiUrl: config.apiUrl,
+        connectedAt: config.connectedAt,
+      } : null,
+      package: {
+        version: VERSION,
+        privacy: 'Zero telemetry on free tier. Dashboard sync is opt-in.',
+      },
+    };
+
+    if (options.json) {
+      console.log(JSON.stringify(status, null, 2));
+      return;
+    }
+
+    console.log(chalk.blue(`\n📊 llmverify Status (v${VERSION})\n`));
+    console.log(chalk.gray('═'.repeat(50)));
+
+    // Connection
+    console.log(chalk.bold('\nDashboard Connection'));
+    console.log(chalk.gray('─'.repeat(50)));
+    if (config.apiKey) {
+      console.log(`  ${chalk.green('[OK]')} Connected to ${config.apiUrl}`);
+      console.log(`  ${chalk.dim('Connected:')} ${config.connectedAt}`);
+    } else {
+      console.log(`  ${chalk.gray('[ ]')} Not connected (100% local mode)`);
+      console.log(`  ${chalk.dim('Connect:')} npx llmverify connect <API_KEY>`);
+    }
+
+    // Tier
+    console.log(chalk.bold('\nTier'));
+    console.log(chalk.gray('─'.repeat(50)));
+    console.log(`  ${chalk.cyan('Current:')}   ${(config.tier || 'free').toUpperCase()}`);
+    console.log(`  ${chalk.cyan('Limit:')}     ${limit === Infinity ? 'Unlimited' : `${limit}/day`}`);
+
+    // Usage
+    console.log(chalk.bold('\nToday\'s Usage'));
+    console.log(chalk.gray('─'.repeat(50)));
+    console.log(`  ${chalk.cyan('Date:')}      ${usage.date}`);
+    console.log(`  ${chalk.cyan('Calls:')}     ${usage.calls}${limit !== Infinity ? ` / ${limit} (${pct}%)` : ''}`);
+    console.log(`  ${chalk.cyan('Remaining:')} ${limit === Infinity ? 'Unlimited' : remaining}`);
+
+    // Progress bar
+    if (limit !== Infinity) {
+      const barWidth = 30;
+      const filled = Math.round((pct / 100) * barWidth);
+      const bar = chalk.green('█'.repeat(Math.min(filled, barWidth))) + chalk.gray('░'.repeat(Math.max(0, barWidth - filled)));
+      console.log(`  [${bar}] ${pct}%`);
+    }
+
+    // Breakdown
+    if (usage.breakdown) {
+      console.log(chalk.bold('\nBreakdown'));
+      console.log(chalk.gray('─'.repeat(50)));
+      Object.entries(usage.breakdown).forEach(([fn, count]) => {
+        if ((count as number) > 0) {
+          console.log(`  ${chalk.cyan(fn.padEnd(16))} ${count}`);
+        }
+      });
+    }
+
+    console.log();
+  });
+
+// ============================================================================
+// COMMAND: usage (alias for status — backward compatibility)
+// ============================================================================
+
+program
+  .command('usage')
+  .description('Show daily usage (alias for status)')
+  .option('--json', 'Output as JSON')
+  .action((options: { json?: boolean }) => {
+    // Inline the same logic as status command to avoid recursive parse
+    const config = readDashboardConfig();
+    const { readUsage } = require('./usage/tracker');
+    const usage = readUsage(config.tier || 'free');
+
+    const tierLimits: Record<string, number> = {
+      free: 500, starter: 5000, pro: 50000, business: Infinity, enterprise: Infinity,
+    };
+    const limit = tierLimits[config.tier || 'free'] || 500;
+    const remaining = Math.max(0, limit - usage.calls);
+    const pct = limit === Infinity ? 0 : Math.round((usage.calls / limit) * 100);
+
+    if (options.json) {
+      console.log(JSON.stringify({ tier: config.tier || 'free', date: usage.date, calls: usage.calls, limit: limit === Infinity ? 'unlimited' : limit, remaining: limit === Infinity ? 'unlimited' : remaining }, null, 2));
+      return;
+    }
+
+    console.log(chalk.blue(`\n📊 llmverify Usage (v${VERSION})\n`));
+    console.log(`  ${chalk.cyan('Date:')}      ${usage.date}`);
+    console.log(`  ${chalk.cyan('Tier:')}      ${(config.tier || 'free').toUpperCase()}`);
+    console.log(`  ${chalk.cyan('Calls:')}     ${usage.calls}${limit !== Infinity ? ` / ${limit} (${pct}%)` : ''}`);
+    console.log(`  ${chalk.cyan('Remaining:')} ${limit === Infinity ? 'Unlimited' : remaining}`);
+    console.log();
+  });
 
 program.parse();

@@ -9,7 +9,7 @@
  * @license MIT
  */
 
-export const VERSION = '1.5.1';
+export const VERSION = '1.5.2';
 
 /**
  * PRIVACY GUARANTEE - NON-NEGOTIABLE

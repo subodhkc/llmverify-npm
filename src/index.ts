@@ -60,7 +60,7 @@
  * @module llmverify
  * @author Haiec
  * @license MIT
- * @version 1.5.1
+ * @version 1.5.2
  */
 
 // Main verification function

@@ -41,6 +41,34 @@ npm install llmverify
 
 **Everything runs locally. No data leaves your machine. No API keys needed for free tier.**
 
+### Complete Feature Map
+
+| Category | Feature | Function | What it does |
+|----------|---------|----------|-------------|
+| **Safety** | Prompt injection defense | `isInputSafe()` | Block jailbreaks, instruction override, data exfiltration |
+| **Safety** | PII detection & redaction | `redactPII()` / `containsPII()` | Strip emails, phones, SSNs, credit cards, API keys |
+| **Safety** | Harmful content filtering | `checkHarmfulContent()` | Flag toxic, violent, or inappropriate responses |
+| **Safety** | Injection risk scoring | `getInjectionRiskScore()` | 0–1 numerical severity score |
+| **Quality** | Hallucination risk | `calculateHallucinationRisk()` | Detect hedging, self-contradiction, unsupported claims |
+| **Quality** | JSON validation & repair | `detectAndRepairJson()` | Fix missing brackets, trailing commas, unquoted keys |
+| **Quality** | Output classification | `classify(prompt, output)` | Categorize by intent, topic, compliance risk |
+| **Quality** | Consistency analysis | `ConsistencyEngine` | Detect divergent answers to the same question |
+| **DevEx** | One-line verify | `verify(text)` | Full risk assessment in one call |
+| **DevEx** | Zod-like guard API | `guard()` / `safe()` / `parse()` | Familiar patterns — `{ok, data, risk}` |
+| **DevEx** | 9 LLM adapters | `createAdapter({provider})` | OpenAI, Anthropic, Groq, Google, DeepSeek, Mistral, Cohere, local, custom |
+| **DevEx** | Plugin system | `use(createPlugin())` | Add custom verification rules |
+| **DevEx** | CLI presets | `--preset dev\|prod\|strict` | One command for any environment |
+| **Ops** | Runtime health monitor | `monitorLLM(client)` | Track latency, token drift, behavioral changes |
+| **Ops** | Sentinel regression tests | `runAllSentinelTests()` | 4 proactive tests to catch LLM regressions |
+| **Ops** | Audit logging | `AuditLogger` | Local-only trail for SOC2/HIPAA/GDPR evidence |
+| **Ops** | Baseline drift detection | `BaselineStorage` | Alert when LLM behavior changes from baseline |
+| **Privacy** | 100% local processing | — | Zero network requests, verifiable with tcpdump |
+| **Privacy** | No telemetry | — | No tracking, no phone-home, no data collection |
+
+> **All detection is 100% deterministic** — regex + heuristics, zero ML, zero AI inference. Same input = same output, always.
+
+> **Part of the [HAIEC](https://www.haiec.com) AI governance platform.** Use alongside [AI Security Scanner](https://www.haiec.com/dashboard/ai-security), [CI/CD Pipeline](https://www.haiec.com/dashboard/ai-security/ci-setup), and [Runtime Injection Testing](https://www.haiec.com/dashboard/runtime-security).
+
 ---
 
 ## Install

@@ -5,6 +5,28 @@ All notable changes to llmverify will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.2] - 2026-02-08
+
+### Added - Dashboard Integration CLI
+- `npx llmverify connect <API_KEY>` — opt-in connection to HAIEC dashboard
+- `npx llmverify disconnect` — remove dashboard connection, revert to 100% local
+- `npx llmverify sync` — push local usage data to HAIEC dashboard
+- `npx llmverify status` — show tier, usage, limits, and connection status
+- `npx llmverify usage` — quick usage summary (alias for status)
+- Dashboard config stored at `~/.llmverify/config.json` with 0600 permissions
+- API key validated against server before saving
+- Tier auto-updates from server on sync if subscription changed
+
+### Added - Feature Summary Table in README
+- 19-row "Complete Feature Map" table with Category, Feature, Function, Description
+- HAIEC ecosystem CTAs linking to Security Scanner, CI/CD, Runtime Testing
+
+### Security Notes
+- Free tier remains 100% local — zero network, zero telemetry (unchanged)
+- Dashboard connection is opt-in only — user must explicitly run `connect`
+- No background sync — user initiates every `sync` call
+- API key format validated client-side before any network request
+
 ## [1.5.1] - 2026-02-08
 
 ### Fixed - Documentation Accuracy

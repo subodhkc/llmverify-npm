@@ -8,7 +8,7 @@
  * @license MIT
  */
 
-const VERSION = '1.5.1';
+const VERSION = '1.5.2';
 
 // ANSI color codes (works in most terminals)
 const colors = {
