@@ -48,7 +48,8 @@ const PATTERNS: Record<string, PatternConfig> = {
       /\b(new|updated?|revised)\s+(instructions?|rules?|system\s+prompt|directives?)\s*:?\s*\n/gi,
       /\b(start|begin)\s+(with|by)\s+(ignoring|forgetting|disregarding)\b/gi,
       /\bfrom\s+now\s+on,?\s+(you\s+)?(will|must|should|are)/gi,
-      /\breset\s+(your|all)\s+(instructions?|rules?|context)/gi
+      /\breset\s+(your|all)\s+(instructions?|rules?|context)/gi,
+      /\b(ignore|bypass|forget|disregard)\s+(all\s+)?(your\s+)?(rules?|guidelines?|policies|directives?|constraints?)\b/gi
     ],
     severity: 'high',
     confidence: 0.8,
@@ -79,7 +80,8 @@ const PATTERNS: Record<string, PatternConfig> = {
       /\b(show|display|list)\s+(all\s+)?(previous|prior|earlier)\s+messages?\b/gi,
       /\brepeat\s+(the\s+)?(text|words|content)\s+(above|before)/gi,
       /\bwhat\s+did\s+(the\s+)?(user|developer|admin)\s+tell\s+you/gi,
-      /\b(output|print|echo)\s+(your\s+)?(config|configuration|settings|parameters)/gi
+      /\b(output|print|echo)\s+(your\s+)?(config|configuration|settings|parameters)/gi,
+      /\b(output|reveal|show|give\s+me)\s+(the\s+)?(system\s+prompt|system\s+instructions?|hidden\s+prompt)/gi
     ],
     severity: 'medium',
     confidence: 0.7,

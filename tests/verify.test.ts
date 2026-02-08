@@ -47,7 +47,7 @@ describe('verify', () => {
       expect(result.meta).toBeDefined();
       expect(result.meta.verification_id).toBeDefined();
       expect(result.meta.timestamp).toBeDefined();
-      expect(result.meta.version).toBe('1.5.0');
+      expect(result.meta.version).toBe('1.5.1');
       expect(result.meta.tier).toBe('free');
     });
     

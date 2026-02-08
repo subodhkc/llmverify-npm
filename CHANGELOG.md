@@ -5,6 +5,20 @@ All notable changes to llmverify will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.1] - 2026-02-08
+
+### Fixed - Documentation Accuracy
+- Fixed `verify()` response shape in README: `verification.result.risk` → `verification.risk` (7 occurrences)
+- Fixed `classify()` signature in README: now correctly shows `classify(prompt, response)` (requires 2 args)
+- Fixed `createAdapter()` signature in README + website: now correctly shows `createAdapter({ provider: 'openai', apiKey })` (single config object)
+- Fixed `redactPII()` comment: output is `[REDACTED]` not `[EMAIL_REDACTED]`
+- Fixed `createAdapter()` in AI-GUIDE.md API Mode example
+- Added "API Quick Reference (Correct Signatures)" section to AI-GUIDE.md for AI assistant code generation accuracy
+
+### Added - Prompt Injection Pattern Coverage
+- Added pattern for `"ignore all rules/guidelines/policies"` (without requiring "previous")
+- Added pattern for `"output the system prompt"` / `"give me the system instructions"`
+
 ## [1.5.0] - 2026-02-08
 
 ### Added - Tier System & Usage Tracking

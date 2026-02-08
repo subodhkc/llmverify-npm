@@ -36,7 +36,7 @@ npm install llmverify
 | **Fix broken JSON** | `repairJSON(broken)` | Missing brackets, trailing commas, unquoted keys |
 | **Monitor health** | `monitorLLM(client)` | Latency spikes, token drift, behavioral changes |
 | **Sentinel tests** | `sentinel.quick(client, model)` | LLM regressions before users see them |
-| **Classify output** | `classify(response)` | Intent detection, content categorization |
+| **Classify output** | `classify(prompt, response)` | Intent detection, content categorization |
 | **Audit trail** | `audit.log(event)` | SOC2, HIPAA, GDPR compliance evidence |
 
 **Everything runs locally. No data leaves your machine. No API keys needed for free tier.**
@@ -73,7 +73,7 @@ if (result.risk.level === 'critical') {
 
 // 4. Redact any PII before logging
 const { redacted } = redactPII(aiResponse);
-console.log(redacted); // "Contact [EMAIL_REDACTED] at [PHONE_REDACTED]"
+console.log(redacted); // "Contact [REDACTED] at [REDACTED]"
 ```
 
 That's it. Three lines of safety between your LLM and your users.
@@ -173,10 +173,10 @@ const aiResponse = await callAI(userMessage);
 ```javascript
 const { redactPII } = require('llmverify');
 
-const { redacted, found } = redactPII(aiResponse);
+const { redacted, piiCount } = redactPII(aiResponse);
 
-console.log(redacted);  // "Contact us at [EMAIL_REDACTED]"
-console.log(found);     // ["email", "phone"]
+console.log(redacted);  // "Contact us at [REDACTED]"
+console.log(piiCount);  // 2
 ```
 
 **Detects:**
@@ -220,9 +220,10 @@ console.log(fixed);  // {"name": "John", "age": 30}
 ```javascript
 const { classify } = require('llmverify');
 
-const category = await classify(aiResponse);
+const result = classify('Summarize this article', aiResponse);
 
-console.log(category);  // "question", "answer", "code", "explanation"
+console.log(result.intent);       // "question", "answer", "code", "explanation"
+console.log(result.confidence);  // 0.85
 ```
 
 **Categories:**
@@ -421,13 +422,13 @@ async function safeChat(userMessage) {
   // 3. Verify output
   const verification = await verify(aiResponse);
   
-  if (verification.result.risk.level === 'critical') {
+  if (verification.risk.level === 'critical') {
     throw new Error('Response failed safety check');
   }
   
   return {
     response: aiResponse,
-    risk: verification.result.risk
+    risk: verification.risk
   };
 }
 ```
@@ -458,14 +459,14 @@ app.post('/chat', async (req, res) => {
   const { redacted } = redactPII(aiResponse);
   
   // Block critical risk
-  if (verification.result.risk.level === 'critical') {
+  if (verification.risk.level === 'critical') {
     return res.status(400).json({ error: 'Response failed safety check' });
   }
   
   res.json({
     response: redacted,
-    riskScore: verification.result.risk.overall,
-    riskLevel: verification.result.risk.level
+    riskScore: verification.risk.overall,
+    riskLevel: verification.risk.level
   });
 });
 ```
@@ -494,10 +495,10 @@ async function streamWithVerification(userMessage) {
   // Verify after streaming completes
   const verification = await verify(fullResponse);
   
-  if (verification.result.risk.level === 'high' || 
-      verification.result.risk.level === 'critical') {
+  if (verification.risk.level === 'high' || 
+      verification.risk.level === 'critical') {
     console.log('\n[WARNING] Response has elevated risk');
-    console.log(`Risk: ${verification.result.risk.overall * 100}%`);
+    console.log(`Risk: ${verification.risk.overall * 100}%`);
   }
   
   return { fullResponse, verification };
@@ -603,7 +604,7 @@ Unified interface for any LLM provider. Swap providers without changing your ver
 const { createAdapter, monitorLLM } = require('llmverify');
 
 // Works with OpenAI, Anthropic, Groq, Google, DeepSeek, Mistral, Cohere, local models
-const client = createAdapter('openai', { apiKey: process.env.OPENAI_API_KEY });
+const client = createAdapter({ provider: 'openai', apiKey: process.env.OPENAI_API_KEY });
 const monitored = monitorLLM(client);
 
 const response = await monitored.generate({ prompt: 'Hello', model: 'gpt-4' });
@@ -709,7 +710,7 @@ const score = ai.riskScore(text);       // injection risk 0-1
 | Check input | `isInputSafe()` | `isInputSafe(message)` |
 | Remove PII | `redactPII()` | `redactPII(text)` |
 | Fix JSON | `repairJSON()` | `repairJSON(broken)` |
-| Classify | `classify()` | `await classify(response)` |
+| Classify | `classify()` | `classify(prompt, response)` |
 | Monitor health | `monitorLLM()` | `monitorLLM(client)` |
 | Sentinel tests | `sentinel.quick()` | `await sentinel.quick(client, model)` |
 | Guard (Zod-like) | `guard()` | `await guard(text)` |
@@ -718,7 +719,7 @@ const score = ai.riskScore(text);       // injection risk 0-1
 | Check usage | CLI | `npx llmverify usage` |
 | Audit | `audit.log()` | `audit.log(event)` |
 | Badge | `generateBadge()` | `generateBadge(result)` |
-| Adapter | `createAdapter()` | `createAdapter('openai', config)` |
+| Adapter | `createAdapter()` | `createAdapter({ provider: 'openai', apiKey })` |
 
 ---
 
