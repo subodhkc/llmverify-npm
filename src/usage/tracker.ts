@@ -125,6 +125,21 @@ export function incrementUsage(
 }
 
 /**
+ * Reset usage data — deletes the usage file.
+ * Primarily for testing. Returns true if reset succeeded.
+ */
+export function resetUsage(): boolean {
+  try {
+    if (fs.existsSync(USAGE_FILE)) {
+      fs.unlinkSync(USAGE_FILE);
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Get a human-readable usage summary for CLI display
  */
 export function getUsageSummary(tier: string = 'free'): string {

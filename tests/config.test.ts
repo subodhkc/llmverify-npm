@@ -62,9 +62,9 @@ describe('Configuration System', () => {
     });
     
     it('should merge runtime config', () => {
-      const config = loadConfig({ tier: 'team' });
+      const config = loadConfig({ tier: 'starter' });
       
-      expect(config.tier).toBe('team');
+      expect(config.tier).toBe('starter');
     });
   });
 });

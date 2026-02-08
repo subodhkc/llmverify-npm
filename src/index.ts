@@ -328,7 +328,7 @@ export { LLMVerifyIDE, createIDEExtension } from './ide-extension';
 export type { VerificationResult } from './ide-extension';
 
 // Usage tracking
-export { readUsage, incrementUsage, getUsageSummary, checkUsageLimit, checkContentLength } from './usage';
+export { readUsage, incrementUsage, getUsageSummary, resetUsage, checkUsageLimit, checkContentLength } from './usage';
 export type { UsageData, UsageLimitResult } from './usage';
 
 // Tier usage limits

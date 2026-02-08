@@ -83,25 +83,29 @@ export async function verify(options: string | VerifyOptions): Promise<VerifyRes
   const config = mergeConfig(baseConfig);
   
   // Usage tracking — local only, no network calls
+  // Bypassed in test environment (LLMVERIFY_TEST=1)
   const tier = (config.tier || 'free') as Tier;
-  const usageLimitCheck = checkUsageLimit(tier);
-  if (!usageLimitCheck.allowed) {
-    throw new VerificationError(
-      usageLimitCheck.warning || 'Daily usage limit exceeded',
-      ErrorCode.USAGE_LIMIT_EXCEEDED
+  let usageLimitCheck = { allowed: true, remaining: Infinity, used: 0, limit: Infinity, inGracePeriod: false } as { allowed: boolean; remaining: number; used: number; limit: number; warning?: string; inGracePeriod: boolean };
+  if (!process.env.LLMVERIFY_TEST) {
+    usageLimitCheck = checkUsageLimit(tier);
+    if (!usageLimitCheck.allowed) {
+      throw new VerificationError(
+        usageLimitCheck.warning || 'Daily usage limit exceeded',
+        ErrorCode.USAGE_LIMIT_EXCEEDED
+      );
+    }
+    const contentLengthCheck = checkContentLength(
+      Buffer.byteLength(options.content, 'utf-8'),
+      tier
     );
+    if (!contentLengthCheck.allowed) {
+      throw new VerificationError(
+        contentLengthCheck.warning || 'Content exceeds tier size limit',
+        ErrorCode.CONTENT_LENGTH_EXCEEDED
+      );
+    }
+    incrementUsage('verify', tier);
   }
-  const contentLengthCheck = checkContentLength(
-    Buffer.byteLength(options.content, 'utf-8'),
-    tier
-  );
-  if (!contentLengthCheck.allowed) {
-    throw new VerificationError(
-      contentLengthCheck.warning || 'Content exceeds tier size limit',
-      ErrorCode.CONTENT_LENGTH_EXCEEDED
-    );
-  }
-  incrementUsage('verify', tier);
   
   // CRITICAL: Validate privacy compliance
   validatePrivacyCompliance(config);

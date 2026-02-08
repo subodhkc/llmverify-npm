@@ -47,7 +47,7 @@ describe('verify', () => {
       expect(result.meta).toBeDefined();
       expect(result.meta.verification_id).toBeDefined();
       expect(result.meta.timestamp).toBeDefined();
-      expect(result.meta.version).toBe('1.0.0');
+      expect(result.meta.version).toBe('1.5.0');
       expect(result.meta.tier).toBe('free');
     });
     
@@ -57,7 +57,7 @@ describe('verify', () => {
     
     it('should reject content exceeding max length', async () => {
       const longContent = 'a'.repeat(2000000); // 2MB - exceeds 1MB limit
-      await expect(verify({ content: longContent })).rejects.toThrow('exceeds maximum size');
+      await expect(verify({ content: longContent })).rejects.toThrow('Content exceeds maximum size');
     });
   });
   

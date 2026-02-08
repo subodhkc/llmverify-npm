@@ -9,7 +9,7 @@
  * @license MIT
  */
 
-export { readUsage, incrementUsage, getUsageSummary } from './tracker';
+export { readUsage, incrementUsage, getUsageSummary, resetUsage } from './tracker';
 export type { UsageData } from './tracker';
 export { checkUsageLimit, checkContentLength } from './limits';
 export type { UsageLimitResult } from './limits';
