@@ -1,4 +1,4 @@
-# Quick Start: AI Response Verification in Windsurf
+# Quick Start: AI Response Verification in IDE
 
 ## Two Ways to Use llmverify
 
