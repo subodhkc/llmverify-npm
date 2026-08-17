@@ -9,7 +9,7 @@
  * @license MIT
  */
 
-export const VERSION = '1.5.2';
+export const VERSION = '1.6.0';
 
 /**
  * PRIVACY GUARANTEE - NON-NEGOTIABLE
@@ -108,7 +108,7 @@ export const TERMINOLOGY = {
   
   avoid: {
     detection: 'foolproof detection',
-    hallucination: 'hallucination detection',
+    hallucination: 'definitive hallucination detection',
     accuracy: '100% accurate',
     verification: 'verified as true/false',
     compliance: 'fully compliant'

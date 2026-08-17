@@ -6,7 +6,7 @@
 [![CI](https://github.com/subodhkc/llmverify-npm/actions/workflows/ci.yml/badge.svg)](https://github.com/subodhkc/llmverify-npm/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**100% Local** | **No Telemetry** | **Privacy-First** | **500 free calls/day**
+**100% Local (free tier)** | **No Telemetry** | **Privacy-First** | **2000 free calls/day**
 
 ---
 
@@ -45,11 +45,11 @@ npm install llmverify
 
 | Category | Feature | Function | What it does |
 |----------|---------|----------|-------------|
-| **Safety** | Prompt injection defense | `isInputSafe()` | Block jailbreaks, instruction override, data exfiltration |
-| **Safety** | PII detection & redaction | `redactPII()` / `containsPII()` | Strip emails, phones, SSNs, credit cards, API keys |
-| **Safety** | Harmful content filtering | `checkHarmfulContent()` | Flag toxic, violent, or inappropriate responses |
+| **Safety** | Prompt injection defense | `isInputSafe()` | Detect jailbreaks, instruction override, and data exfiltration patterns |
+| **Safety** | PII detection & redaction | `redactPII()` / `containsPII()` | Identify and redact emails, phones, SSNs, credit cards, API keys |
+| **Safety** | Harmful content filtering | `checkHarmfulContent()` | Flag potentially toxic, violent, or inappropriate responses |
 | **Safety** | Injection risk scoring | `getInjectionRiskScore()` | 0–1 numerical severity score |
-| **Quality** | Hallucination risk | `calculateHallucinationRisk()` | Detect hedging, self-contradiction, unsupported claims |
+| **Quality** | Hallucination risk signals | `calculateHallucinationRisk()` | Identify hedging, self-contradiction, and unsupported-claim patterns |
 | **Quality** | JSON validation & repair | `detectAndRepairJson()` | Fix missing brackets, trailing commas, unquoted keys |
 | **Quality** | Output classification | `classify(prompt, output)` | Categorize by intent, topic, compliance risk |
 | **Quality** | Consistency analysis | `ConsistencyEngine` | Detect divergent answers to the same question |
@@ -778,3 +778,4 @@ MIT License — See [LICENSE](LICENSE) for details.
 ---
 
 **Made with care for AI safety and developer experience.**
+

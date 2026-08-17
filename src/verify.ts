@@ -284,6 +284,7 @@ export async function verify(options: string | VerifyOptions): Promise<VerifyRes
   
   return {
     ...result,
+    schemaVersion: '1.0',
     risk: result.risk!,
     meta: {
       verification_id: verificationId,

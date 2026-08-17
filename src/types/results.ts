@@ -162,6 +162,8 @@ export interface RiskScore {
 }
 
 export interface VerifyResult {
+  /** Result schema version (independent of package version). Changes only when result contract compatibility changes. */
+  schemaVersion: string;
   hallucination?: HallucinationResult;
   consistency?: ConsistencyResult;
   json?: JSONResult;

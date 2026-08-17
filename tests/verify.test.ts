@@ -47,8 +47,9 @@ describe('verify', () => {
       expect(result.meta).toBeDefined();
       expect(result.meta.verification_id).toBeDefined();
       expect(result.meta.timestamp).toBeDefined();
-      expect(result.meta.version).toBe('1.5.2');
+      expect(result.meta.version).toBe('1.6.0');
       expect(result.meta.tier).toBe('free');
+      expect(result.schemaVersion).toBe('1.0');
     });
     
     it('should reject empty content', async () => {
