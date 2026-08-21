@@ -30,8 +30,53 @@ import { isInputSafe, redactPII, containsPII } from './csm6/security';
 import { classify } from './engines/classification';
 import { VERSION } from './constants';
 import { VerifyResult } from './types/results';
+import { RateLimiter } from './security/validators';
 
 const app = express();
+
+// Rate limiter for HTTP endpoints. Default: 100 requests / 60s per client.
+// Prevents local DoS and runaway loops calling the server.
+const rateLimiter = new RateLimiter(100, 60_000);
+
+/**
+ * Resolve a client key for rate limiting. Falls back to 'local' when no
+ * remote address is available (e.g. supertest).
+ */
+function getClientKey(req: any): string {
+  const xff = req.headers && req.headers['x-forwarded-for'];
+  if (typeof xff === 'string' && xff.length > 0) {
+    return xff.split(',')[0].trim();
+  }
+  return (req.ip || (req.socket && req.socket.remoteAddress) || 'local') as string;
+}
+
+/** Rate-limit middleware applied to mutating endpoints. */
+function rateLimit(req: any, res: any, next: any): void {
+  const key = getClientKey(req);
+  if (!rateLimiter.isAllowed(key)) {
+    res.status(429).json({
+      success: false,
+      error: 'Rate limit exceeded. Try again shortly.',
+      remaining: rateLimiter.getRemaining(key)
+    });
+    return;
+  }
+  next();
+}
+
+/**
+ * Determine whether an Origin is a localhost origin that may be allowed by
+ * CORS. Blocks arbitrary websites from driving the local server.
+ */
+function isLocalhostOrigin(origin: string): boolean {
+  try {
+    const u = new URL(origin);
+    const h = u.hostname.toLowerCase();
+    return h === 'localhost' || h === '127.0.0.1' || h === '::1' || h === '[::1]';
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Format verification result into human-readable summary
@@ -138,13 +183,18 @@ function formatHumanReadable(result: VerifyResult): {
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// CORS for local development
+// CORS: only allow localhost origins. Prevents arbitrary websites from
+// driving the local verification server (drive-by exfiltration).
 app.use((req: any, res: any, next: any) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  const origin = req.headers && req.headers.origin;
+  if (typeof origin === 'string' && isLocalhostOrigin(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+    res.header('Vary', 'Origin');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
+  }
   if (req.method === 'OPTIONS') {
-    res.sendStatus(200);
+    res.sendStatus(204);
     return;
   }
   next();
@@ -161,7 +211,7 @@ app.get('/health', (req: Request, res: Response) => {
 });
 
 // Main verification endpoint
-app.post('/verify', async (req: Request, res: Response): Promise<void> => {
+app.post('/verify', rateLimit, async (req: Request, res: Response): Promise<void> => {
   try {
     const { text, content, prompt, config } = req.body;
     
@@ -213,7 +263,7 @@ app.post('/verify', async (req: Request, res: Response): Promise<void> => {
 });
 
 // Input safety check endpoint
-app.post('/check-input', async (req: Request, res: Response): Promise<void> => {
+app.post('/check-input', rateLimit, async (req: Request, res: Response): Promise<void> => {
   try {
     const { text, input } = req.body;
     const inputText = text || input;
@@ -244,7 +294,7 @@ app.post('/check-input', async (req: Request, res: Response): Promise<void> => {
 });
 
 // PII detection endpoint
-app.post('/check-pii', async (req: Request, res: Response): Promise<void> => {
+app.post('/check-pii', rateLimit, async (req: Request, res: Response): Promise<void> => {
   try {
     const { text, content } = req.body;
     const inputText = text || content;
@@ -276,7 +326,7 @@ app.post('/check-pii', async (req: Request, res: Response): Promise<void> => {
 });
 
 // Classification endpoint
-app.post('/classify', async (req: Request, res: Response): Promise<void> => {
+app.post('/classify', rateLimit, async (req: Request, res: Response): Promise<void> => {
   try {
     const { prompt, output, config } = req.body;
     
@@ -339,22 +389,31 @@ app.use((err: any, req: Request, res: Response, next: any) => {
 });
 
 // Start server
-export function startServer(port: number = 9009) {
-  const server = app.listen(port, () => {
+//
+// `host` defaults to 127.0.0.1 (localhost only) so the verification API is
+// NOT exposed to the network. Pass '0.0.0.0' explicitly (via `--host=0.0.0.0`)
+// to listen on all interfaces — only do this on a trusted network.
+export function startServer(port: number = 9009, host: string = '127.0.0.1') {
+  const server = app.listen(port, host, () => {
+    const displayHost = host === '0.0.0.0' ? 'localhost' : host;
+    const exposure = host === '0.0.0.0'
+      ? 'ALL interfaces (0.0.0.0) — ensure this is a trusted network'
+      : 'localhost only (127.0.0.1)';
     console.log(`
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║  llmverify server v${VERSION}                                                    ║
-║  Running on http://localhost:${port}                                           ║
+║  Listening on ${host}:${port} (${exposure})
 ╚══════════════════════════════════════════════════════════════════════════════╝
 
 Available endpoints:
-  GET  http://localhost:${port}/health        - Health check
-  POST http://localhost:${port}/verify        - Verify AI output
-  POST http://localhost:${port}/check-input   - Check input safety
-  POST http://localhost:${port}/check-pii     - Detect PII
-  POST http://localhost:${port}/classify      - Classify output
+  GET  http://${displayHost}:${port}/health        - Health check
+  POST http://${displayHost}:${port}/verify        - Verify AI output
+  POST http://${displayHost}:${port}/check-input   - Check input safety
+  POST http://${displayHost}:${port}/check-pii     - Detect PII
+  POST http://${displayHost}:${port}/classify      - Classify output
 
 Privacy: All processing is 100% local. Zero telemetry.
+Security: localhost-only by default, CORS restricted to localhost, rate-limited.
 
 Press Ctrl+C to stop the server.
 `);
@@ -388,11 +447,29 @@ if (require.main === module) {
   const args = process.argv.slice(2);
   const portArg = args.find(arg => arg.startsWith('--port='));
   const port = portArg ? parseInt(portArg.split('=')[1], 10) : 9009;
-  
+  const hostArg = args.find(arg => arg.startsWith('--host='));
+  // Default to 127.0.0.1 (localhost only). Allow 0.0.0.0 only when explicitly
+  // requested, to avoid accidentally exposing the verification API.
+  const host = hostArg ? hostArg.split('=')[1].trim() : '127.0.0.1';
+
   if (isNaN(port) || port < 1 || port > 65535) {
     console.error('Invalid port number. Must be between 1 and 65535.');
     process.exit(1);
   }
-  
-  startServer(port);
+
+  if (host !== '127.0.0.1' && host !== 'localhost' && host !== '0.0.0.0') {
+    console.error(
+      `Invalid host "${host}". Use 127.0.0.1 (default) or 0.0.0.0 (all interfaces).`
+    );
+    process.exit(1);
+  }
+
+  if (host === '0.0.0.0') {
+    console.warn(
+      '[llmverify] WARNING: binding to 0.0.0.0 exposes the server to your network. ' +
+      'Only do this on a trusted network. There is no authentication on the API.'
+    );
+  }
+
+  startServer(port, host === 'localhost' ? '127.0.0.1' : host);
 }

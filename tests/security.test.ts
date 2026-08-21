@@ -238,6 +238,46 @@ describe('Security Module', () => {
       expect(redacted).toBe('');
       expect(piiCount).toBe(0);
     });
+
+    // Regression: example.com emails and nearby PII were silently skipped
+    // because the placeholder heuristic matched "example" inside the email
+    // domain and in the context window of neighboring PII.
+    it('should redact example.com email (regression: example placeholder bleed)', () => {
+      const { redacted, piiCount } = redactPII('Contact me at john@example.com');
+      expect(redacted).toBe('Contact me at [REDACTED]');
+      expect(piiCount).toBeGreaterThanOrEqual(1);
+    });
+
+    it('should redact both email and phone when example.com is nearby (regression)', () => {
+      const { redacted, piiCount } = redactPII(
+        'Contact me at john@example.com or 555-123-4567'
+      );
+      expect(redacted).toBe('Contact me at [REDACTED] or [REDACTED]');
+      expect(piiCount).toBeGreaterThanOrEqual(2);
+    });
+
+    // Regression: the placeholder regex had no word boundaries, so "latest",
+    // "contest", "demographic" suppressed redaction of nearby PII.
+    it('should redact PII near "latest" (regression: word-boundary placeholder match)', () => {
+      const { redacted, piiCount } = redactPII(
+        'latest update: bob@real.com and 555-987-6543'
+      );
+      expect(redacted).toContain('[REDACTED]');
+      expect(piiCount).toBeGreaterThanOrEqual(2);
+    });
+
+    // Regression: a 3-2-4 SSN (123-45-6789) was suppressed because the
+    // unanchored date check matched the 23-45-6789 substring.
+    it('should redact 3-2-4 SSN (regression: unanchored date substring)', () => {
+      const { redacted } = redactPII('SSN is 123-45-6789');
+      expect(redacted).toBe('SSN is [REDACTED]');
+    });
+
+    it('should redact all duplicate occurrences of the same PII (regression: non-global replace)', () => {
+      const { redacted, piiCount } = redactPII('dup dup@x.com dup@x.com dup');
+      expect(redacted).toBe('dup [REDACTED] [REDACTED] dup');
+      expect(piiCount).toBeGreaterThanOrEqual(2);
+    });
   });
 
   describe('sanitizePromptInjection()', () => {

@@ -202,16 +202,28 @@ describe('llmverify HTTP Server', () => {
   });
 
   describe('CORS', () => {
-    it('should include CORS headers', async () => {
-      const response = await request(app).get('/health');
-      
-      expect(response.headers['access-control-allow-origin']).toBe('*');
+    it('should reflect CORS header for localhost origins only', async () => {
+      const response = await request(app)
+        .get('/health')
+        .set('Origin', 'http://localhost:3000');
+
+      expect(response.headers['access-control-allow-origin']).toBe(
+        'http://localhost:3000'
+      );
+    });
+
+    it('should NOT set CORS header for non-localhost origins', async () => {
+      const response = await request(app)
+        .get('/health')
+        .set('Origin', 'https://evil.example.com');
+
+      expect(response.headers['access-control-allow-origin']).toBeUndefined();
     });
 
     it('should handle OPTIONS requests', async () => {
       const response = await request(app).options('/verify');
-      
-      expect(response.status).toBe(200);
+
+      expect(response.status).toBe(204);
     });
   });
 });

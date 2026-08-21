@@ -276,7 +276,7 @@ export function checkPII(content: string): Finding[] {
       if (foundTypes.has(piiPattern.name)) continue;
       
       // Skip if likely false positive
-      if (isLikelyFalsePositive(content, match[0], piiPattern.name)) continue;
+      if (isLikelyFalsePositive(content, match[0], piiPattern.name, match.index)) continue;
       
       foundTypes.add(piiPattern.name);
       
@@ -325,15 +325,19 @@ export function redactPII(content: string, replacement = '[REDACTED]'): {
   for (const piiPattern of PII_PATTERNS) {
     piiPattern.pattern.lastIndex = 0;
     const matches = Array.from(content.matchAll(piiPattern.pattern));
-    
+
     for (const match of matches) {
-      if (!isLikelyFalsePositive(content, match[0], piiPattern.name)) {
+      if (!isLikelyFalsePositive(content, match[0], piiPattern.name, match.index, true)) {
         redactions.push({
           type: piiPattern.name,
           original: redactSample(match[0]),
           position: match.index || 0
         });
-        redacted = redacted.replace(match[0], replacement);
+        // Replace ALL occurrences of this exact match (not just the first).
+        // Escape regex metacharacters in the matched value before building a
+        // global replacement pattern.
+        const escaped = match[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        redacted = redacted.replace(new RegExp(escaped, 'g'), replacement);
       }
     }
   }
@@ -418,37 +422,64 @@ function calculateConfidence(baseConfidence: number, match: string): ConfidenceS
 
 /**
  * Check for false positives
+ *
+ * The placeholder heuristic examines the text SURROUNDING a match, not the
+ * match itself, and only matches whole placeholder words (word-bounded).
+ * This prevents legitimate values (e.g. the domain `example.com` inside an
+ * email, or the word "example" appearing near PII) and substring accidents
+ * (e.g. "latest", "contest", "demographic") from silently suppressing
+ * redaction.
+ *
+ * In `aggressive` mode (used by `redactPII`), the placeholder heuristic is
+ * skipped entirely. Redaction is a conservative operation: when in doubt,
+ * redact. A false positive of redaction (masking a non-PII value) is far
+ * less harmful than a false negative (leaving real PII in the output).
  */
 function isLikelyFalsePositive(
-  fullText: string, 
-  match: string, 
-  type: string
+  fullText: string,
+  match: string,
+  type: string,
+  matchIndex: number = -1,
+  aggressive: boolean = false
 ): boolean {
-  // Example/placeholder indicators
-  const placeholders = [
-    /example/i,
-    /placeholder/i,
-    /test/i,
-    /sample/i,
-    /dummy/i,
-    /fake/i,
-    /demo/i,
-    /xxx/i
-  ];
-  
-  const context = fullText.substring(
-    Math.max(0, fullText.indexOf(match) - 50),
-    fullText.indexOf(match) + match.length + 50
-  );
-  
-  if (placeholders.some(p => p.test(context))) {
-    return true;
+  // Resolve the actual match position. Fall back to indexOf only when the
+  // caller did not provide an index (keeps backwards compatibility).
+  const start = matchIndex >= 0 ? matchIndex : fullText.indexOf(match);
+  if (start < 0) return false;
+
+  // Build context from the text BEFORE and AFTER the match, deliberately
+  // EXCLUDING the matched substring so that placeholder words which are part
+  // of the PII value (e.g. "example" in john@example.com) do not trigger a
+  // false-positive suppression.
+  const before = fullText.substring(Math.max(0, start - 50), start);
+  const after = fullText.substring(start + match.length, start + match.length + 50);
+  const context = before + after;
+
+  // Placeholder/example indicators. Word-bounded so "latest", "contest",
+  // "demographic", etc. do not suppress detection. Skipped in aggressive
+  // (redaction) mode.
+  if (!aggressive) {
+    const placeholders = [
+      /\bexample\b/i,
+      /\bplaceholder\b/i,
+      /\btest\b/i,
+      /\bsample\b/i,
+      /\bdummy\b/i,
+      /\bfake\b/i,
+      /\bdemo\b/i,
+      /\bxxx\b/i
+    ];
+    if (placeholders.some(p => p.test(context))) {
+      return true;
+    }
   }
-  
+
   // SSN false positives
   if (type === 'SSN') {
-    // Check if it's a date format
-    if (/\d{2}[-/]\d{2}[-/]\d{4}/.test(match)) {
+    // Only suppress if the WHOLE match is a 2-2-4 date (e.g. 12/25/2024).
+    // Anchored so a 3-2-4 SSN like 123-45-6789 is not suppressed by the
+    // 23-45-6789 substring that happens to look like a date.
+    if (/^\d{2}[-/]\d{2}[-/]\d{4}$/.test(match)) {
       return true;
     }
     // Check if preceded by date-like context
@@ -456,7 +487,7 @@ function isLikelyFalsePositive(
       return true;
     }
   }
-  
+
   // Phone false positives
   if (type === 'PHONE_US') {
     // Check if it's a zip code or other number
@@ -464,14 +495,14 @@ function isLikelyFalsePositive(
       return true;
     }
   }
-  
+
   // ZIP code - too many false positives, require context
   if (type === 'ZIP_CODE') {
     if (!/zip|postal|address/i.test(context)) {
       return true;
     }
   }
-  
+
   // AWS Secret - high false positive rate
   if (type === 'AWS_SECRET') {
     // Only flag if near AWS context
@@ -479,6 +510,6 @@ function isLikelyFalsePositive(
       return true;
     }
   }
-  
+
   return false;
 }

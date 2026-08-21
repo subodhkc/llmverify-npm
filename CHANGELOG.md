@@ -5,6 +5,35 @@ All notable changes to llmverify will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.1] - 2026-08-21
+
+### Fixed - PII redaction false negatives
+- `redactPII` no longer skips `example.com` emails: the placeholder heuristic now examines only the text surrounding a match (not the match itself), so `example` inside an email domain no longer suppresses redaction.
+- Placeholder words are now word-bounded (`\bexample\b`, `\btest\b`, ...), so substrings like "latest", "contest", and "demographic" no longer suppress redaction of nearby PII.
+- `redactPII` now operates in conservative (aggressive) mode: it redacts when in doubt rather than suppressing. A false positive of redaction is less harmful than leaking real PII.
+- Duplicate PII occurrences are now all redacted (previously only the first match was replaced; the replace is now global).
+- SSN detection no longer suppressed by an unanchored date check: a 3-2-4 SSN like `123-45-6789` is no longer skipped because the `23-45-6789` substring looked like a 2-2-4 date. The date check is now anchored to the whole match.
+
+### Security - HTTP server hardening (`llmverify-serve`)
+- Server binds to `127.0.0.1` (localhost only) by default. Previously bound to `0.0.0.0` (all interfaces) with no authentication, exposing the verification API to the network.
+- CORS restricted to localhost origins. Previously `Access-Control-Allow-Origin: *`, allowing any website to drive the local server.
+- Rate limiting added to all POST endpoints (100 requests / 60s per client). `RateLimiter` was already exported but unused.
+- `--host=0.0.0.0` now requires an explicit flag and prints a warning. Only use on a trusted network; there is no auth on the API.
+
+### Fixed - input validation
+- `verify()` "invalid characters" check is no longer a no-op. It now rejects unprintable control characters (except tab, newline, carriage return). The previous regex matched everything.
+
+### Changed - package metadata
+- `homepage` corrected to `https://www.haiec.com/llmverify` (was a non-existent `/llmverify/docs` path).
+- `author` set to `Subodh Kc <subodhkc.com>` (was `HAIEC`), consistent with `mcp-tenant-isolation`.
+- Removed broken `serve`, `serve:force`, `monitor`, and `setup-ai` npm scripts that referenced files not shipped with the package. Use `npx llmverify-serve` for the HTTP server.
+
+### Changed - README
+- Rewritten in HAIEC voice: fixed mojibake em-dashes, corrected all links (product page, PyPI placeholder, dashboard), corrected advertised API names (`detectAndRepairJson`, `auditLog`), added a Last Updated date and an honest Limitations section.
+
+### Changed - publishing
+- `npm-publish.yml` switched to npm Trusted Publishing via GitHub Actions OIDC with `--provenance`. No `NPM_TOKEN`. Requires npm-side trusted-publisher configuration (repo + workflow + `release` environment).
+
 ## [1.5.2] - 2026-02-08
 
 ### Added - Dashboard Integration CLI

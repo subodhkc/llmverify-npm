@@ -1,9 +1,9 @@
-name: NPM Publish with Provenance
+name: NPM Publish (Trusted Publishing + Provenance)
 
 on:
   push:
     tags:
-      - 'v*'
+      - 'v*.*.*'
 
 permissions:
   id-token: write
@@ -11,8 +11,9 @@ permissions:
 
 jobs:
   publish:
-    name: Build and Publish to NPM
+    name: Build and Publish to npm via OIDC
     runs-on: ubuntu-latest
+    environment: release
 
     steps:
       - name: Checkout repository
@@ -25,6 +26,12 @@ jobs:
           cache: 'npm'
           registry-url: 'https://registry.npmjs.org/'
 
+      # Trusted publishing (npm publish --provenance with OIDC) requires
+      # npm >= 11.5.1. The setup-node action ships an older npm on Node 22,
+      # so upgrade it explicitly.
+      - name: Install latest npm for trusted publishing
+        run: npm install -g npm@latest
+
       - name: Install dependencies
         run: npm ci
 
@@ -34,18 +41,22 @@ jobs:
       - name: Run tests
         run: npm test -- --testPathIgnorePatterns="integration|monitor"
 
-      - name: Verify package contents
+      - name: Verify package contents (no secrets)
         run: |
           npm pack --dry-run
-          echo "[OK] Package contents verified"
+          npm pack
+          tar -tzf llmverify-*.tgz | grep -E '\.(env|key|pem|secret)$' && exit 1 || echo "No secrets found in package"
+          rm llmverify-*.tgz
 
-      - name: Publish to NPM with Provenance
+      # Trusted publishing: no NPM_TOKEN. Authentication is via the GitHub
+      # Actions OIDC token (id-token: write above) + the trusted publisher
+      # configuration on npmjs.com. Provenance attestations are generated
+      # automatically.
+      - name: Publish to npm with provenance
         run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Output result
         run: |
-          echo "[OK] Package published successfully with provenance!"
-          echo "[OK] Provenance badge will appear on npmjs.com"
+          echo "[OK] Package published via trusted publishing with provenance."
           echo "[OK] Tag: ${{ github.ref_name }}"
+          echo "Verify attestations: npm view llmverify@${GITHUB_REF_NAME#v} dist.attestations"
