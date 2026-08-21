@@ -29,6 +29,10 @@ on:
 env:
   LLMVERIFY_PRESET: ${{ github.event.inputs.preset || 'ci' }}
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   verify-ai-output:
     name: Verify AI Output

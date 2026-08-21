@@ -1,6 +1,6 @@
 {
   "name": "llmverify",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "description": "AI Output Verification Toolkit — Local-first LLM safety, hallucination risk signals, PII redaction, prompt injection defense, and runtime monitoring. Zero telemetry. OWASP LLM Top 10 aligned.",
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -36,10 +36,6 @@
   "scripts": {
     "build": "tsc",
     "build:clean": "rm -rf dist && tsc",
-    "serve": "node start-server.js",
-    "serve:force": "node start-server-force.js",
-    "monitor": "node monitor.js",
-    "setup-ai": "node setup-ai-prompts.js",
     "test": "jest",
     "test:integration": "jest tests/integration.test.js --testTimeout=20000",
     "test:coverage": "jest --coverage && node -e \"console.log('\\n\\nHTML Coverage Report: coverage/lcov-report/index.html\\n\\nTo view in browser:\\n  Windows: start coverage/lcov-report/index.html\\n  Mac: open coverage/lcov-report/index.html\\n  Linux: xdg-open coverage/lcov-report/index.html\\n')\"",
@@ -97,7 +93,7 @@
     "gpt",
     "claude"
   ],
-  "author": "HAIEC",
+  "author": "Subodh Kc <subodhkc.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -106,7 +102,7 @@
   "bugs": {
     "url": "https://github.com/subodhkc/llmverify-npm/issues"
   },
-  "homepage": "https://haiec.com/llmverify/docs",
+  "homepage": "https://www.haiec.com/llmverify",
   "funding": {
     "type": "individual",
     "url": "https://www.buymeacoffee.com/subodhkc"

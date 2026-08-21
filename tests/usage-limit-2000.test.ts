@@ -23,7 +23,7 @@ function getToday(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 }
 
-describe('free tier 2000/day limit (v1.6.0)', () => {
+describe('free tier 2000/day limit (v1.6.1)', () => {
   beforeEach(() => {
     resetUsage();
   });

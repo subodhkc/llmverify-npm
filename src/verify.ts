@@ -378,10 +378,12 @@ function validateInput(content: string, config: Config): void {
     );
   }
   
-  // Check for invalid characters
-  if (!/^[\x00-\x7F\u0080-\uFFFF]*$/.test(content)) {
+  // Reject unprintable control characters (except tab, newline, carriage
+  // return). These have no legitimate place in LLM output text and can be
+  // used to corrupt logs, terminals, or downstream parsers.
+  if (/[\x00-\x08\x0B\x0C\x0E-\x1F]/.test(content)) {
     throw new ValidationError(
-      'Content contains invalid characters',
+      'Content contains unprintable control characters',
       ErrorCode.INVALID_ENCODING,
       { contentLength: content.length }
     );

@@ -2,7 +2,7 @@ import { verify } from '../src/verify';
 import { resetUsage } from '../src/usage/tracker';
 import { redactPII, containsPII, isInputSafe } from '../src/csm6/security';
 
-describe('stdout/stdio safety (v1.6.0)', () => {
+describe('stdout/stdio safety (v1.6.1)', () => {
   beforeEach(() => {
     resetUsage();
     process.env.LLMVERIFY_TEST = '1';
