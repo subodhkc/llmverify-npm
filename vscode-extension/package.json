@@ -140,6 +140,6 @@
     "@typescript-eslint/parser": "^6.x",
     "eslint": "^8.x",
     "typescript": "^5.x",
-    "@vscode/vsce": "^2.x"
+    "@vscode/vsce": "^4.x"
   }
 }
