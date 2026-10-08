@@ -150,7 +150,7 @@ If a claim matters, verify it yourself. llmverify narrows the risk surface; it d
 
 ## Part of HAIEC
 
-llmverify is part of the [HAIEC](https://www.haiec.com) AI governance platform. Use it alongside the [AI Security Scanner](https://www.haiec.com/dashboard/ai-security), the [CI/CD pipeline integration](https://www.haiec.com/dashboard/ai-security/ci-setup), and [Runtime Injection Testing](https://www.haiec.com/dashboard/runtime-security).
+llmverify is part of the [HAIEC](https://www.haiec.com) (Human AI Evidence Company) AI governance platform. Use it alongside the [AI Security Scanner](https://www.haiec.com/dashboard/ai-security), the [CI/CD pipeline integration](https://www.haiec.com/dashboard/ai-security/ci-setup), and [Runtime Injection Testing](https://www.haiec.com/dashboard/runtime-security).
 
 ---
 
