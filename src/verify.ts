@@ -13,8 +13,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { Config, DEFAULT_CONFIG, TIER_LIMITS, Tier } from './types/config';
 import { VerifyResult } from './types/results';
 import { VERSION } from './constants';
-import { PrivacyViolationError, ValidationError, VerificationError } from './errors';
+import { AuditPersistenceError, PrivacyViolationError, ValidationError, VerificationError } from './errors';
 import { ErrorCode } from './errors/codes';
+import { AuditWriteResult } from './audit/integrity';
 import { HallucinationEngine } from './engines/hallucination';
 import { ConsistencyEngine } from './engines/consistency';
 import { JSONValidatorEngine } from './engines/json-validator';
@@ -34,6 +35,21 @@ export interface VerifyOptions {
     isJSON?: boolean;
     expectedSchema?: unknown;
     skipEngines?: string[];
+  };
+  /**
+   * Audit persistence policy for this call.
+   *
+   * requirePersistence — evidence-required mode: if the audit write
+   *   fails, verify() throws AuditPersistenceError instead of
+   *   returning a result whose audit record was never stored.
+   *   Default false (developer mode): failures are reported on
+   *   result.audit.status and never thrown.
+   *
+   * onResult — optional observer invoked with the AuditWriteResult.
+   */
+  audit?: {
+    requirePersistence?: boolean;
+    onResult?: (result: AuditWriteResult) => void;
   };
 }
 
@@ -168,6 +184,10 @@ export async function verify(options: string | VerifyOptions): Promise<VerifyRes
           result.limitations?.push(...res.limitations);
         })
       );
+    } else {
+      // Record accurately when the JSON engine produced nothing:
+      // disabled, explicitly skipped, or not applicable (non-JSON input).
+      result.notChecked?.push('json');
     }
     
     // CSM6 checks
@@ -231,8 +251,9 @@ export async function verify(options: string | VerifyOptions): Promise<VerifyRes
     findingsCount: result.csm6?.findings?.length || 0
   });
   
-  // Audit trail
-  auditLogger.logVerification({
+  // Audit trail — the receipt records what ACTUALLY happened. A
+  // successful verification does not imply a persisted audit record.
+  const auditReceipt = auditLogger.logVerification({
     requestId,
     content: options.content,
     prompt: options.context?.isJSON ? 'JSON validation' : undefined,
@@ -243,6 +264,21 @@ export async function verify(options: string | VerifyOptions): Promise<VerifyRes
     enginesUsed,
     configTier: config.tier
   });
+  
+  try {
+    options.audit?.onResult?.(auditReceipt);
+  } catch {
+    // Observer failures must not affect verification
+  }
+  
+  // Evidence-required mode: surface failed persistence as a typed error
+  if (options.audit?.requirePersistence && auditReceipt.status === 'FAILED') {
+    throw new AuditPersistenceError(
+      `Audit persistence required but failed: ${auditReceipt.error || 'unknown error'}`,
+      { requestId, filePath: auditReceipt.filePath },
+      requestId
+    );
+  }
   
   // Baseline tracking and drift detection
   const baselineStorage = getBaselineStorage();
@@ -296,6 +332,12 @@ export async function verify(options: string | VerifyOptions): Promise<VerifyRes
     },
     limitations: result.limitations!,
     notChecked: result.notChecked!,
+    audit: {
+      status: auditReceipt.status,
+      ...(auditReceipt.filePath ? { filePath: auditReceipt.filePath } : {}),
+      ...(auditReceipt.entryDigest ? { entryDigest: auditReceipt.entryDigest } : {}),
+      ...(auditReceipt.error ? { error: auditReceipt.error } : {})
+    },
     ...(warnings.length > 0 ? { warnings } : {})
   } as VerifyResult;
 }

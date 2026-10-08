@@ -73,6 +73,14 @@ export interface Claim {
     missingCitation: boolean;
     vagueLanguage: boolean;
     contradictionSignal: boolean;
+    /** Heuristic score for fabricated-statistic patterns (v1.5+, optional) */
+    fabricatedStatRisk?: number;
+    /** Heuristic score for overconfident language (v1.5+, optional) */
+    overconfidenceRisk?: number;
+    /** Heuristic score for unsupported authority appeals (v1.5+, optional) */
+    fakeAuthorityRisk?: number;
+    /** Weighted combination of the extended risk factors (v1.5+, optional) */
+    combinedRisk?: number;
   };
   confidence: ConfidenceScore;
   limitations: string[];
@@ -161,6 +169,22 @@ export interface RiskScore {
   interpretation: string;
 }
 
+/**
+ * Audit persistence outcome attached to a VerifyResult.
+ * Describes what ACTUALLY happened to the audit write — a successful
+ * verification result does NOT imply a persisted audit record.
+ */
+export interface VerificationAuditStatus {
+  /** Actual persistence outcome of the audit write for this verification */
+  status: 'PERSISTED' | 'DISABLED' | 'FAILED' | 'NOT_ATTEMPTED';
+  /** File the record was appended to (PERSISTED only) */
+  filePath?: string;
+  /** Integrity digest of the stored record ('sha256:<hex>', when written) */
+  entryDigest?: string;
+  /** Error message when status is FAILED */
+  error?: string;
+}
+
 export interface VerifyResult {
   /** Result schema version (independent of package version). Changes only when result contract compatibility changes. */
   schemaVersion: string;
@@ -178,5 +202,21 @@ export interface VerifyResult {
     enginesUsed: string[];
   };
   limitations: string[];
+  /**
+   * Engines that did NOT produce a result (disabled, skipped via
+   * context.skipEngines, or not applicable — e.g. the JSON validator
+   * on non-JSON input). NOT_CHECKED is never a success signal.
+   */
   notChecked: string[];
+  /**
+   * Usage-limit warnings (present only when approaching/exceeding
+   * the local daily call budget).
+   */
+  warnings?: string[];
+  /**
+   * Audit persistence receipt for this verification (v1.7+).
+   * Absent on results produced before the audit write completes or
+   * when no audit path is configured.
+   */
+  audit?: VerificationAuditStatus;
 }

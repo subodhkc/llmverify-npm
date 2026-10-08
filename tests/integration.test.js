@@ -20,11 +20,17 @@ describe('Integration Tests', () => {
     require('child_process').exec(killCmd, () => {
       // Wait for port to be released
       setTimeout(() => {
-        // Start server
-        serverProcess = spawn('node', [path.join(__dirname, '../start-server.js')], {
-          stdio: 'pipe',
-          env: { ...process.env, NODE_ENV: 'test' }
+        // Start server (isolated state dir so tests don't touch ~/.llmverify)
+        serverProcess = spawn('node', [path.join(__dirname, '../bin/llmverify-serve.js')], {
+          // stdio ignored: open child pipes cause jest worker ECONNRESET at teardown
+          stdio: 'ignore',
+          env: {
+            ...process.env,
+            NODE_ENV: 'test',
+            LLMVERIFY_HOME: require('os').tmpdir() + path.sep + 'llmverify-integration-' + process.pid
+          }
         });
+        serverProcess.unref();
 
         // Wait for server to start
         setTimeout(() => {
@@ -32,10 +38,14 @@ describe('Integration Tests', () => {
         }, 5000);
       }, 2000);
     });
-  }, 20000);
+  }, 60000);
 
   afterAll((done) => {
     if (serverProcess) {
+      // Destroy pooled keep-alive sockets BEFORE the server dies —
+      // otherwise their ECONNRESET propagates as an uncaught error and
+      // jest reports the whole suite as failed.
+      http.globalAgent.destroy();
       serverProcess.kill();
       setTimeout(done, 1000);
     } else {
@@ -62,8 +72,7 @@ describe('Integration Tests', () => {
     }, 10000);
   });
 
-  describe('Content Verification Scenarios', () => {
-    function verifyContent(content) {
+  function verifyContent(content) {
       return new Promise((resolve, reject) => {
         const data = JSON.stringify({ content });
         const options = {
@@ -97,6 +106,7 @@ describe('Integration Tests', () => {
       });
     }
 
+  describe('Content Verification Scenarios', () => {
     test('Scenario 1: Simple safe content', async () => {
       const content = 'Hello, this is a simple test message.';
       const result = await verifyContent(content);

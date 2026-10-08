@@ -48,7 +48,10 @@ export enum ErrorCode {
   
   // Usage/Tier errors (7xxx)
   USAGE_LIMIT_EXCEEDED = 'LLMVERIFY_7001',
-  CONTENT_LENGTH_EXCEEDED = 'LLMVERIFY_7002'
+  CONTENT_LENGTH_EXCEEDED = 'LLMVERIFY_7002',
+
+  // Audit/persistence errors (8xxx)
+  AUDIT_PERSISTENCE_FAILED = 'LLMVERIFY_8001'
 }
 
 /**
@@ -273,6 +276,15 @@ export const ERROR_METADATA: Record<ErrorCode, Omit<ErrorMetadata, 'timestamp' |
     message: 'Content exceeds tier size limit',
     recoverable: true,
     suggestion: 'Reduce content size or upgrade your plan at https://haiec.com/llmverify/pricing'
+  },
+
+  // Audit/persistence
+  [ErrorCode.AUDIT_PERSISTENCE_FAILED]: {
+    code: ErrorCode.AUDIT_PERSISTENCE_FAILED,
+    severity: ErrorSeverity.HIGH,
+    message: 'Audit record could not be persisted',
+    recoverable: true,
+    suggestion: 'Check audit directory permissions and disk space, or disable evidence-required mode'
   }
 };
 

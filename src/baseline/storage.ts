@@ -8,7 +8,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import * as os from 'os';
+import { getBaselineDir } from '../paths';
 
 /**
  * Baseline metrics
@@ -63,7 +63,7 @@ export interface BaselineConfig {
  * Default configuration
  */
 const DEFAULT_CONFIG: BaselineConfig = {
-  baselineDir: path.join(os.homedir(), '.llmverify', 'baseline'),
+  baselineDir: undefined, // resolved via getBaselineDir() (LLMVERIFY_BASELINE_DIR / LLMVERIFY_HOME)
   driftThreshold: 20, // 20% drift triggers warning
   maxDriftHistory: 1000,
   autoCalibrate: false
@@ -79,8 +79,9 @@ export class BaselineStorage {
   
   constructor(config?: Partial<BaselineConfig>) {
     this.config = { ...DEFAULT_CONFIG, ...config };
-    this.baselineFile = path.join(this.config.baselineDir!, 'baseline.json');
-    this.driftFile = path.join(this.config.baselineDir!, 'drift-history.jsonl');
+    const dir = this.config.baselineDir || getBaselineDir();
+    this.baselineFile = path.join(dir, 'baseline.json');
+    this.driftFile = path.join(dir, 'drift-history.jsonl');
     this.ensureDirectory();
   }
   
@@ -88,9 +89,10 @@ export class BaselineStorage {
    * Ensure baseline directory exists
    */
   private ensureDirectory(): void {
-    if (this.config.baselineDir) {
+    const dir = this.config.baselineDir || getBaselineDir();
+    if (dir) {
       try {
-        fs.mkdirSync(this.config.baselineDir, { recursive: true });
+        fs.mkdirSync(dir, { recursive: true });
       } catch (error) {
         console.error('Failed to create baseline directory:', error);
       }

@@ -11,7 +11,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import * as os from 'os';
+import { getUsageFile } from '../paths';
 
 /**
  * Shape of the local usage file (~/.llmverify/usage.json)
@@ -31,8 +31,17 @@ export interface UsageData {
   tier: string;
 }
 
-const USAGE_DIR = path.join(os.homedir(), '.llmverify');
-const USAGE_FILE = path.join(USAGE_DIR, 'usage.json');
+/**
+ * Resolved lazily so LLMVERIFY_HOME / LLMVERIFY_USAGE_FILE env overrides
+ * take effect (including per-test isolation).
+ */
+function usageFile(): string {
+  return getUsageFile();
+}
+
+function usageDir(): string {
+  return path.dirname(usageFile());
+}
 
 /**
  * Get today's date as YYYY-MM-DD in local time
@@ -47,8 +56,8 @@ function getToday(): string {
  */
 function ensureDir(): void {
   try {
-    if (!fs.existsSync(USAGE_DIR)) {
-      fs.mkdirSync(USAGE_DIR, { recursive: true });
+    if (!fs.existsSync(usageDir())) {
+      fs.mkdirSync(usageDir(), { recursive: true });
     }
   } catch {
     // Silently fail — usage tracking is best-effort
@@ -62,8 +71,8 @@ export function readUsage(tier: string = 'free'): UsageData {
   const today = getToday();
   
   try {
-    if (fs.existsSync(USAGE_FILE)) {
-      const raw = fs.readFileSync(USAGE_FILE, 'utf-8');
+    if (fs.existsSync(usageFile())) {
+      const raw = fs.readFileSync(usageFile(), 'utf-8');
       const data: UsageData = JSON.parse(raw);
       
       // Reset if new day
@@ -102,7 +111,7 @@ function createFreshUsage(date: string, tier: string): UsageData {
 function writeUsage(data: UsageData): void {
   try {
     ensureDir();
-    fs.writeFileSync(USAGE_FILE, JSON.stringify(data, null, 2), 'utf-8');
+    fs.writeFileSync(usageFile(), JSON.stringify(data, null, 2), 'utf-8');
   } catch {
     // Silently fail — usage tracking is best-effort
   }
@@ -130,8 +139,8 @@ export function incrementUsage(
  */
 export function resetUsage(): boolean {
   try {
-    if (fs.existsSync(USAGE_FILE)) {
-      fs.unlinkSync(USAGE_FILE);
+    if (fs.existsSync(usageFile())) {
+      fs.unlinkSync(usageFile());
     }
     return true;
   } catch {

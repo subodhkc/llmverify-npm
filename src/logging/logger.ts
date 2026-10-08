@@ -11,6 +11,8 @@ import * as path from 'path';
 import * as os from 'os';
 import { v4 as uuidv4 } from 'uuid';
 import { ErrorCode } from '../errors/codes';
+import { getLogDir } from '../paths';
+import { sanitizeForLogging } from '../security/validators';
 
 /**
  * Log levels
@@ -63,12 +65,41 @@ export interface LoggerConfig {
 const DEFAULT_CONFIG: LoggerConfig = {
   enabled: true,
   level: LogLevel.INFO,
-  logDir: path.join(os.homedir(), '.llmverify', 'logs'),
+  logDir: undefined, // resolved lazily via getLogDir() (LLMVERIFY_LOG_DIR / LLMVERIFY_HOME)
   maxFileSize: 10 * 1024 * 1024, // 10MB
   maxFiles: 10,
   includeMetadata: true,
   sanitizePII: true
 };
+
+/**
+ * Keys whose values are always redacted from structured log data.
+ * Matches on substrings of the lowercased key to cover common variants
+ * (apiKey, api_key, AWS_SECRET_ACCESS_KEY, bearerToken, ...).
+ */
+const SENSITIVE_KEY_PATTERNS = [
+  'password',
+  'passwd',
+  'secret',
+  'token',
+  'apikey',
+  'api_key',
+  'api-key',
+  'authorization',
+  'credential',
+  'private_key',
+  'privatekey',
+  'private-key',
+  'access_key',
+  'accesskey',
+  'session',
+  'cookie'
+];
+
+function isSensitiveKey(key: string): boolean {
+  const lower = key.toLowerCase();
+  return SENSITIVE_KEY_PATTERNS.some(p => lower.includes(p));
+}
 
 /**
  * Logger class
@@ -83,13 +114,19 @@ export class Logger {
     this.ensureLogDirectory();
   }
   
+  /** Resolved log directory (env-aware). */
+  private resolvedLogDir(): string | undefined {
+    return this.config.logDir || getLogDir();
+  }
+
   /**
    * Ensure log directory exists
    */
   private ensureLogDirectory(): void {
-    if (this.config.enabled && this.config.logDir) {
+    const dir = this.resolvedLogDir();
+    if (this.config.enabled && dir) {
       try {
-        fs.mkdirSync(this.config.logDir, { recursive: true });
+        fs.mkdirSync(dir, { recursive: true });
       } catch (error) {
         console.error('Failed to create log directory:', error);
         this.config.enabled = false;
@@ -133,7 +170,7 @@ export class Logger {
    */
   private getLogFilePath(): string {
     const date = new Date().toISOString().split('T')[0];
-    return path.join(this.config.logDir!, `llmverify-${date}.jsonl`);
+    return path.join(this.resolvedLogDir()!, `llmverify-${date}.jsonl`);
   }
   
   /**
@@ -143,19 +180,15 @@ export class Logger {
     if (!this.config.sanitizePII) return data;
     
     if (typeof data === 'string') {
-      // Remove email addresses
-      data = data.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[EMAIL]');
-      // Remove phone numbers
-      data = data.replace(/\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/g, '[PHONE]');
-      // Remove SSN
-      data = data.replace(/\b\d{3}-\d{2}-\d{4}\b/g, '[SSN]');
-      // Remove API keys (common patterns)
-      data = data.replace(/\b[A-Za-z0-9]{32,}\b/g, '[API_KEY]');
+      // Delegate to the shared sanitizer so diagnostic output applies
+      // the same PII/secret patterns everywhere (email, phone, SSN,
+      // card numbers, API keys, IP addresses).
+      data = sanitizeForLogging(data);
     } else if (typeof data === 'object' && data !== null) {
       const sanitized: any = Array.isArray(data) ? [] : {};
       for (const key in data) {
-        // Skip sensitive keys
-        if (['password', 'apiKey', 'token', 'secret', 'authorization'].includes(key.toLowerCase())) {
+        // Skip sensitive keys (common naming variants)
+        if (isSensitiveKey(key)) {
           sanitized[key] = '[REDACTED]';
         } else {
           sanitized[key] = this.sanitizeData(data[key]);
@@ -213,15 +246,16 @@ export class Logger {
    * Clean up old log files
    */
   private cleanupOldLogs(): void {
-    if (!this.config.logDir) return;
+    const dir = this.resolvedLogDir();
+    if (!dir) return;
     
     try {
-      const files = fs.readdirSync(this.config.logDir)
+      const files = fs.readdirSync(dir)
         .filter(f => f.startsWith('llmverify-') && f.endsWith('.jsonl'))
         .map(f => ({
           name: f,
-          path: path.join(this.config.logDir!, f),
-          time: fs.statSync(path.join(this.config.logDir!, f)).mtime.getTime()
+          path: path.join(dir, f),
+          time: fs.statSync(path.join(dir, f)).mtime.getTime()
         }))
         .sort((a, b) => b.time - a.time);
       
@@ -261,7 +295,7 @@ export class Logger {
     
     if (error) {
       entry.error = {
-        message: error.message,
+        message: this.config.sanitizePII ? sanitizeForLogging(error.message) : error.message,
         code: (error as any).code,
         stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
       };
@@ -329,10 +363,11 @@ export class Logger {
    * Read logs for a specific date
    */
   public readLogs(date?: string): LogEntry[] {
-    if (!this.config.logDir) return [];
+    const dir = this.resolvedLogDir();
+    if (!dir) return [];
     
     const dateStr = date || new Date().toISOString().split('T')[0];
-    const logFile = path.join(this.config.logDir, `llmverify-${dateStr}.jsonl`);
+    const logFile = path.join(dir, `llmverify-${dateStr}.jsonl`);
     
     if (!fs.existsSync(logFile)) return [];
     
