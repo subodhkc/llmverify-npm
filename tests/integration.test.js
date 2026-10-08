@@ -9,7 +9,7 @@ const path = require('path');
 describe('Integration Tests', () => {
   let serverProcess;
   const SERVER_PORT = 9009;
-  const SERVER_URL = `http://localhost:${SERVER_PORT}`;
+  const SERVER_URL = `http://127.0.0.1:${SERVER_PORT}`;
 
   beforeAll((done) => {
     // Kill any existing process on port 9009
@@ -76,7 +76,7 @@ describe('Integration Tests', () => {
       return new Promise((resolve, reject) => {
         const data = JSON.stringify({ content });
         const options = {
-          hostname: 'localhost',
+          hostname: '127.0.0.1',
           port: SERVER_PORT,
           path: '/verify',
           method: 'POST',
@@ -243,7 +243,7 @@ useEffect runs side effects after render.
     test('should handle invalid JSON', (done) => {
       const data = 'invalid json';
       const options = {
-        hostname: 'localhost',
+        hostname: '127.0.0.1',
         port: SERVER_PORT,
         path: '/verify',
         method: 'POST',
@@ -266,7 +266,7 @@ useEffect runs side effects after render.
     test('should handle missing content field', (done) => {
       const data = JSON.stringify({ notContent: 'test' });
       const options = {
-        hostname: 'localhost',
+        hostname: '127.0.0.1',
         port: SERVER_PORT,
         path: '/verify',
         method: 'POST',
@@ -299,7 +299,7 @@ useEffect runs side effects after render.
       
       const data = JSON.stringify({ content });
       const options = {
-        hostname: 'localhost',
+        hostname: '127.0.0.1',
         port: SERVER_PORT,
         path: '/verify',
         method: 'POST',
@@ -335,7 +335,7 @@ useEffect runs side effects after render.
         
         return new Promise((resolve) => {
           const options = {
-            hostname: 'localhost',
+            hostname: '127.0.0.1',
             port: SERVER_PORT,
             path: '/verify',
             method: 'POST',

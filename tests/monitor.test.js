@@ -34,7 +34,7 @@ describe('Monitor Script', () => {
       // Poll /health until the server is actually listening (max ~30s)
       const deadline = Date.now() + 30000;
       const poll = () => {
-        http.get(`http://localhost:${SERVER_PORT}/health`, (res) => {
+        http.get(`http://127.0.0.1:${SERVER_PORT}/health`, (res) => {
           res.resume();
           if (res.statusCode === 200) done();
           else if (Date.now() < deadline) setTimeout(poll, 500);
@@ -63,7 +63,7 @@ describe('Monitor Script', () => {
 
   describe('Server Health Check', () => {
     test('should connect to server successfully', (done) => {
-      http.get(`http://localhost:${SERVER_PORT}/health`, (res) => {
+      http.get(`http://127.0.0.1:${SERVER_PORT}/health`, (res) => {
         expect(res.statusCode).toBe(200);
         
         let data = '';
@@ -84,7 +84,7 @@ describe('Monitor Script', () => {
       const data = JSON.stringify({ content });
 
       const options = {
-        hostname: 'localhost',
+        hostname: '127.0.0.1',
         port: SERVER_PORT,
         path: '/verify',
         method: 'POST',
@@ -120,7 +120,7 @@ describe('Monitor Script', () => {
       const data = JSON.stringify({ content });
 
       const options = {
-        hostname: 'localhost',
+        hostname: '127.0.0.1',
         port: SERVER_PORT,
         path: '/verify',
         method: 'POST',
@@ -156,7 +156,7 @@ describe('Monitor Script', () => {
       const data = JSON.stringify({ content });
 
       const options = {
-        hostname: 'localhost',
+        hostname: '127.0.0.1',
         port: SERVER_PORT,
         path: '/verify',
         method: 'POST',
@@ -282,7 +282,7 @@ describe('Monitor Script', () => {
       const data = 'invalid json';
 
       const options = {
-        hostname: 'localhost',
+        hostname: '127.0.0.1',
         port: SERVER_PORT,
         path: '/verify',
         method: 'POST',
@@ -306,7 +306,7 @@ describe('Monitor Script', () => {
       const data = JSON.stringify({ content: '' });
 
       const options = {
-        hostname: 'localhost',
+        hostname: '127.0.0.1',
         port: SERVER_PORT,
         path: '/verify',
         method: 'POST',
@@ -341,7 +341,7 @@ describe('Monitor Script', () => {
       const data = JSON.stringify({ content });
 
       const options = {
-        hostname: 'localhost',
+        hostname: '127.0.0.1',
         port: SERVER_PORT,
         path: '/verify',
         method: 'POST',
