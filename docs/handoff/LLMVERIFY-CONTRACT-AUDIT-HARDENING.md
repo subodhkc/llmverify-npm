@@ -298,7 +298,14 @@ Developer mode unchanged: receipts returned, never thrown.
 - Local full suite: **37/37 suites, 751/751 tests** (Node 24.11.1,
   Windows), vs. CI-observed 3 failures pre-fix.
 - `tsc --noEmit` / `npm run build`: clean.
-- GitHub CI on updated head: see PR #21 checks (this commit).
+- GitHub CI (run 37808327345, head 4e1ed73): **all green** —
+  Test on Node 18 ✓, Node 20 ✓, Node 22 ✓, Node 24 ✓, Lint ✓,
+  Package Verification ✓. AI Output Verification (37808327380) ✓.
+- Node-18-only failure found post-push: server suites connected to
+  'localhost' which resolves to ::1 first; without autoSelectFamily
+  (Node <20) the IPv6 attempt was refused against the IPv4-bound
+  localhost-only server. Fixed by dialing 127.0.0.1 explicitly in
+  tests (server bind unchanged — still localhost-only).
 
 ### Compatibility implications
 
