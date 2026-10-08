@@ -212,10 +212,18 @@ export class AuditLogger {
       // Observer failures must not break verification
     }
 
-    if (result.status === 'FAILED' && this.config.requirePersistence) {
+    // Evidence-required mode: only PERSISTED satisfies the contract.
+    // DISABLED and NOT_ATTEMPTED mean no audit record exists — a caller
+    // that required durable evidence must never see a silent success.
+    if (this.config.requirePersistence && result.status !== 'PERSISTED') {
+      const reason = result.status === 'DISABLED'
+        ? 'audit logging is disabled'
+        : result.status === 'NOT_ATTEMPTED'
+          ? 'no audit target was configured'
+          : result.error || 'unknown error';
       throw new AuditPersistenceError(
-        `Audit persistence required but failed: ${result.error || 'unknown error'}`,
-        { filePath: result.filePath }
+        `Audit persistence required but status was ${result.status}: ${reason}`,
+        { status: result.status, filePath: result.filePath }
       );
     }
     return result;

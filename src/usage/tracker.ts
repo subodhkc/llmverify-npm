@@ -11,7 +11,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { getUsageFile } from '../paths';
+import { getUsageFile, atomicWriteFileSync } from '../paths';
 
 /**
  * Shape of the local usage file (~/.llmverify/usage.json)
@@ -111,7 +111,7 @@ function createFreshUsage(date: string, tier: string): UsageData {
 function writeUsage(data: UsageData): void {
   try {
     ensureDir();
-    fs.writeFileSync(usageFile(), JSON.stringify(data, null, 2), 'utf-8');
+    atomicWriteFileSync(usageFile(), JSON.stringify(data, null, 2));
   } catch {
     // Silently fail — usage tracking is best-effort
   }

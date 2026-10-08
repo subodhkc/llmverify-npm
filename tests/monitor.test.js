@@ -14,22 +14,39 @@ describe('Monitor Script', () => {
   const stateDir = require('os').tmpdir() + path.sep + 'llmverify-monitor-' + process.pid;
 
   beforeAll((done) => {
-    // Start the server for testing with an isolated state dir
-    serverProcess = spawn('node', [
-      path.join(__dirname, '../bin/llmverify-serve.js'),
-      `--port=${SERVER_PORT}`
-    ], {
-      // stdio ignored: open child pipes cause jest worker ECONNRESET at teardown
-      stdio: 'ignore',
-      env: { ...process.env, NODE_ENV: 'test', LLMVERIFY_HOME: stateDir }
-    });
-    serverProcess.unref();
+    // Kill any leftover server holding our port (previous crashed runs)
+    const killCmd = process.platform === 'win32'
+      ? `powershell -Command "$proc = Get-NetTCPConnection -LocalPort ${SERVER_PORT} -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique; if ($proc) { Stop-Process -Id $proc -Force }"`
+      : `lsof -ti:${SERVER_PORT} | xargs kill -9 2>/dev/null || true`;
 
-    // Wait for server to start
-    setTimeout(() => {
-      done();
-    }, 2000);
-  });
+    require('child_process').exec(killCmd, () => {
+      // Start the server for testing with an isolated state dir
+      serverProcess = spawn('node', [
+        path.join(__dirname, '../bin/llmverify-serve.js'),
+        `--port=${SERVER_PORT}`
+      ], {
+        // stdio ignored: open child pipes cause jest worker ECONNRESET at teardown
+        stdio: 'ignore',
+        env: { ...process.env, NODE_ENV: 'test', LLMVERIFY_HOME: stateDir }
+      });
+      serverProcess.unref();
+
+      // Poll /health until the server is actually listening (max ~30s)
+      const deadline = Date.now() + 30000;
+      const poll = () => {
+        http.get(`http://localhost:${SERVER_PORT}/health`, (res) => {
+          res.resume();
+          if (res.statusCode === 200) done();
+          else if (Date.now() < deadline) setTimeout(poll, 500);
+          else done(new Error('server did not become healthy'));
+        }).on('error', () => {
+          if (Date.now() < deadline) setTimeout(poll, 500);
+          else done(new Error('server did not start in 30s'));
+        });
+      };
+      poll();
+    });
+  }, 45000);
 
   afterAll((done) => {
     if (serverProcess) {

@@ -39,10 +39,11 @@ export interface VerifyOptions {
   /**
    * Audit persistence policy for this call.
    *
-   * requirePersistence — evidence-required mode: if the audit write
-   *   fails, verify() throws AuditPersistenceError instead of
-   *   returning a result whose audit record was never stored.
-   *   Default false (developer mode): failures are reported on
+   * requirePersistence — evidence-required mode: verify() throws
+   *   AuditPersistenceError unless the audit record was actually
+   *   PERSISTED. FAILED, DISABLED and NOT_ATTEMPTED all escalate —
+   *   a successful result must never imply a stored audit record.
+   *   Default false (developer mode): outcomes are reported on
    *   result.audit.status and never thrown.
    *
    * onResult — optional observer invoked with the AuditWriteResult.
@@ -271,11 +272,18 @@ export async function verify(options: string | VerifyOptions): Promise<VerifyRes
     // Observer failures must not affect verification
   }
   
-  // Evidence-required mode: surface failed persistence as a typed error
-  if (options.audit?.requirePersistence && auditReceipt.status === 'FAILED') {
+  // Evidence-required mode: ONLY PERSISTED satisfies the contract.
+  // DISABLED and NOT_ATTEMPTED also mean no audit record exists —
+  // surfacing them as success would be a false persistence claim.
+  if (options.audit?.requirePersistence && auditReceipt.status !== 'PERSISTED') {
+    const reason = auditReceipt.status === 'DISABLED'
+      ? 'audit logging is disabled'
+      : auditReceipt.status === 'NOT_ATTEMPTED'
+        ? 'no audit target was configured'
+        : auditReceipt.error || 'unknown error';
     throw new AuditPersistenceError(
-      `Audit persistence required but failed: ${auditReceipt.error || 'unknown error'}`,
-      { requestId, filePath: auditReceipt.filePath },
+      `Audit persistence required but status was ${auditReceipt.status}: ${reason}`,
+      { requestId, status: auditReceipt.status, filePath: auditReceipt.filePath },
       requestId
     );
   }

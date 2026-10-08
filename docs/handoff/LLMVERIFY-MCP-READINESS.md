@@ -43,16 +43,18 @@ Audit/logging surface (optional for the adapter):
 - `content` (string, required) — text to verify. Plain-string shorthand
   (`verify('text')`) is also accepted.
 - `config` — partial `Config`; engine toggles live at
-  `config.engines.{hallucination,consistency,jsonValidator,csm6}.enabled`
-  along with per-engine thresholds and CSM6 profile.
+  `config.engines.{hallucination,consistency,jsonValidator,csm6}.enabled`,
+  tier selection at `config.tier` (`'free' | 'pro' | ...`; controls
+  usage/content limits), plus per-engine thresholds and CSM6 profile.
+  NOTE: `tier` is NOT a top-level `VerifyOptions` field.
 - `context` — `{ isJSON?, expectedSchema?, skipEngines? }`. `isJSON`
   gates the JSON engine onto non-JSON input; `skipEngines` removes
   engines per call. Skipped/disabled engines land in `notChecked`.
-- `tier` — `'free' | 'pro' | ...`; controls usage/content limits.
 - `audit` — `{ requirePersistence?, onResult? }` (v1.7+):
-  `requirePersistence: true` = evidence-required mode (failed audit
-  writes throw `AuditPersistenceError`); `onResult` observes the
-  `AuditWriteResult` receipt. Content-hash controls
+  `requirePersistence: true` = evidence-required mode — throws
+  `AuditPersistenceError` unless the record actually PERSISTED
+  (FAILED, DISABLED and NOT_ATTEMPTED all escalate); `onResult`
+  observes the `AuditWriteResult` receipt. Content-hash controls
   (`includeContentHash`, `hashAlgorithm`, `hashKey`) live on the
   `AuditLoggerV2` config/env, not per call.
 
@@ -87,7 +89,7 @@ with `code`, `severity`, `recoverable`, and structured `details`:
 | Content over absolute max (10 MB) | `ValidationError` |
 | Content over tier limit | `UsageLimitError` (`USAGE_LIMIT_EXCEEDED`) |
 | Tier monthly limit reached | `UsageLimitError` |
-| `audit.requirePersistence: true` and audit write fails | `AuditPersistenceError` (`AUDIT_PERSISTENCE_FAILED`) |
+| `audit.requirePersistence: true` and status is not `PERSISTED` (FAILED, DISABLED, or NOT_ATTEMPTED) | `AuditPersistenceError` (`AUDIT_PERSISTENCE_FAILED`) |
 | Engine timeout | `TimeoutError` |
 
 The adapter should map these to MCP tool errors carrying `code` + message,

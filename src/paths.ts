@@ -19,6 +19,29 @@
 
 import * as path from 'path';
 import * as os from 'os';
+import * as fs from 'fs';
+
+let atomicWriteSequence = 0;
+
+/**
+ * Write `data` to `file` atomically: serialize to a unique temp file in
+ * the same directory, then rename over the target. Concurrent readers
+ * never observe a partially written file.
+ *
+ * NOTE: atomic replacement does NOT solve cross-process
+ * read-modify-write races (last writer wins). Use per-process state
+ * directories when strict update ordering is required.
+ */
+export function atomicWriteFileSync(file: string, data: string): void {
+  const tmp = `${file}.${process.pid}.${++atomicWriteSequence}.tmp`;
+  try {
+    fs.writeFileSync(tmp, data, 'utf-8');
+    fs.renameSync(tmp, file);
+  } catch (error) {
+    try { if (fs.existsSync(tmp)) fs.unlinkSync(tmp); } catch { /* ignore */ }
+    throw error;
+  }
+}
 
 /**
  * Base directory for all llmverify local state.

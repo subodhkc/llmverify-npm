@@ -210,3 +210,98 @@ future tool: `verify_llm_content` (not implemented here).
 - Optional HMAC signing story if producer authenticity becomes required.
 - ESM dual-publish (`"type": "module"` + `.mjs`) if first-class ESM
   becomes a requirement; current interop is tested and works.
+
+## 13. Follow-up — CI, concurrency & evidence-required fixes (PR #21 round 2)
+
+Independent GitHub CI verification on the first PR head found failures that
+local runs masked. This section documents root causes and fixes.
+
+### CI root cause
+
+`tests/stdio-safety.test.ts` failed on all Node matrix jobs (18/20/22/24)
+with repeated baseline-loading errors: incomplete or malformed JSON in
+`~/.llmverify/baseline/baseline.json`. Root cause: every jest worker shared
+the same local state path (`os.homedir()/.llmverify`) and baseline writes
+were non-atomic `writeFileSync` calls, so parallel readers observed torn
+JSON writes and `console.error` noise broke stdio-safety assertions.
+
+Additional CI/local discrepancy: CI ran 32 suites / 680 tests while local
+ran 36+ / 740+ — the workflow's `testPathIgnorePatterns="integration|monitor"`
+over-matched (`e2e-monitor`, `tests/integration/`, `monitor`, `integration`
+suites), silently skipping server packaging tests that this task fixed.
+
+### Concurrency strategy
+
+- `src/baseline/storage.ts`: atomic writes via unique same-directory temp
+  file + `fs.renameSync` (POSIX-atomic; best-effort on Windows); corrupt
+  `baseline.json` is quarantined to `baseline.json.corrupt-<ts>` and the
+  parse error is deduped per corruption signature so a poisoned file does
+  not spam stderr on every read.
+- `src/paths.ts`: shared `atomicWriteFileSync` helper; `LLMVERIFY_HOME`
+  plus per-resource env overrides (`LLMVERIFY_BASELINE_DIR`,
+  `LLMVERIFY_AUDIT_DIR`, `LLMVERIFY_LOG_DIR`, `LLMVERIFY_USAGE_FILE`,
+  `LLMVERIFY_CONFIG_DIR`) honored across all storage modules.
+- `src/usage/tracker.ts`: usage writes now use the same atomic helper.
+- `tests/setup.ts`: each jest worker gets an isolated `LLMVERIFY_HOME`
+  (`os.tmpdir()/llmverify-test-<pid>-<worker>`) so workers never share
+  baseline/usage/audit state. Production defaults unchanged.
+- `tests/monitor.test.js` / `tests/integration.test.js`: fixed sleeps
+  replaced with `/health` readiness polling; keep-alive agent sockets
+  destroyed before child kill (eliminates worker `ECONNRESET`); port
+  pre-cleaned before bind; startup hook timeouts raised for load.
+- `tests/core.test.ts`: fast-vs-strict preset timing margin relaxed
+  (100ms → 500ms) — the assertion guards ordering, not wall-clock, and
+  was flaky under full-suite CPU contention.
+
+### Remaining production concurrency limitations
+
+Atomic replacement prevents torn reads but does NOT prevent lost updates:
+two processes doing read-modify-write on the same baseline can still
+overwrite each other (last writer wins). Cross-process locking / merging
+is out of scope — documented limitation, not hidden.
+
+### Persistence policy corrections
+
+Evidence-required mode previously threw only when `status === 'FAILED'`,
+so `DISABLED` and `NOT_ATTEMPTED` receipts could be mistaken for success.
+Now `requirePersistence: true` throws `AuditPersistenceError` unless
+`status === 'PERSISTED'`, applied consistently at:
+
+- `src/verify.ts` (verify() layer)
+- `src/logging/audit.ts` (`report()`)
+- `src/audit/index.ts` (legacy v1 logger `log()` path)
+
+Error messages name the offending status; no duplicate/misleading errors.
+Developer mode unchanged: receipts returned, never thrown.
+
+### Regression tests added
+
+- `tests/baseline-concurrency.test.ts`: parallel reads during writes
+  (no torn JSON), rapid successive writes, corruption quarantine +
+  recovery, deduped diagnostics.
+- `tests/audit-persistence.test.ts` extended: evidence-required mode
+  asserts throw for `DISABLED` and `NOT_ATTEMPTED`, success for
+  `PERSISTED`, typed error for `FAILED`; developer mode never throws.
+
+### Workflow / config changes
+
+- `.github/workflows/ci.yml`: builds `dist/` before tests; runs the FULL
+  suite (`npm test -- --verbose`) on Node 18/20/22/24; package
+  verification unchanged (dry-run + secrets scan).
+- `package.json` `prepublishOnly`: same over-broad ignore pattern removed.
+- `docs/handoff/LLMVERIFY-MCP-READINESS.md`: corrected `VerifyOptions`
+  docs — tier selection lives at `options.config.tier`, not top-level;
+  aligned examples with real exported types.
+
+### Results after fixes
+
+- Local full suite: **37/37 suites, 751/751 tests** (Node 24.11.1,
+  Windows), vs. CI-observed 3 failures pre-fix.
+- `tsc --noEmit` / `npm run build`: clean.
+- GitHub CI on updated head: see PR #21 checks (this commit).
+
+### Compatibility implications
+
+None — all changes are internal to storage/audit plumbing or additive.
+No public API, schema, or result-shape changes beyond those already
+documented above.

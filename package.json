@@ -42,7 +42,7 @@
     "test:coverage:open": "npm run test:coverage && node -e \"const { exec } = require('child_process'); const cmd = process.platform === 'win32' ? 'start' : process.platform === 'darwin' ? 'open' : 'xdg-open'; exec(`${cmd} coverage/lcov-report/index.html`);\"",
     "test:watch": "jest --watch",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "npm run build && npm test -- --testPathIgnorePatterns=\"integration|monitor\"",
+    "prepublishOnly": "npm run build && npm test",
     "doctor": "node dist/cli.js doctor",
     "verify": "node dist/cli.js verify"
   },

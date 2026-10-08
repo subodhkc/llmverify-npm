@@ -160,6 +160,24 @@ describe('audit persistence status', () => {
       cleanup();
     }
   });
+
+  it('requirePersistence throws on DISABLED — disabled logging is not persistence', () => {
+    const logger = new AuditLogger({ enabled: false, requirePersistence: true });
+    expect(() => logger.logVerification({
+      requestId: 'r1', content: 'x', riskLevel: 'low', findingsCount: 0,
+      blocked: false, duration: 1, enginesUsed: [], configTier: 'free'
+    })).toThrow(AuditPersistenceError);
+  });
+
+  it('requirePersistence returns normally on PERSISTED', () => {
+    const dir = tmpdir();
+    const logger = new AuditLogger({ enabled: true, auditDir: dir, requirePersistence: true });
+    const res = logger.logVerification({
+      requestId: 'r1', content: 'x', riskLevel: 'low', findingsCount: 0,
+      blocked: false, duration: 1, enginesUsed: [], configTier: 'free'
+    });
+    expect(res.status).toBe('PERSISTED');
+  });
 });
 
 describe('verify() audit integration', () => {
@@ -215,5 +233,60 @@ describe('verify() audit integration', () => {
       audit: { onResult: r => receipts.push(r.status) }
     });
     expect(receipts.length).toBe(1);
+  });
+
+  it('throws in evidence-required mode when audit is DISABLED', async () => {
+    setAuditLogger(new AuditLogger({ enabled: false }));
+    await expect(verify({
+      content: 'disabled audit must not satisfy evidence-required mode',
+      audit: { requirePersistence: true }
+    })).rejects.toMatchObject({
+      name: 'AuditPersistenceError',
+      code: ErrorCode.AUDIT_PERSISTENCE_FAILED
+    });
+  });
+
+  it('returns normally in evidence-required mode when PERSISTED', async () => {
+    const dir = tmpdir();
+    setAuditLogger(new AuditLogger({ enabled: true, auditDir: dir }));
+    const result = await verify({
+      content: 'evidence-required success path',
+      audit: { requirePersistence: true }
+    });
+    expect(result.audit!.status).toBe('PERSISTED');
+    expect(result.audit!.entryDigest).toMatch(/^sha256:/);
+  });
+
+  it('developer mode still reports DISABLED without throwing', async () => {
+    setAuditLogger(new AuditLogger({ enabled: false }));
+    const result = await verify({ content: 'developer mode check' });
+    expect(result.risk).toBeDefined();
+    expect(result.audit!.status).toBe('DISABLED');
+  });
+});
+
+describe('legacy audit logger (src/audit/index.ts) persistence semantics', () => {
+  it('requirePersistence throws on NOT_ATTEMPTED (no outputPath)', () => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { AuditLogger: AuditLoggerV1 } = require('../src/audit');
+    const logger = new AuditLoggerV1({
+      enabled: true,
+      outputPath: undefined,
+      requirePersistence: true
+    });
+    expect(() => logger.log(logger.createEntry('verify', 'x', { meta: {} })))
+      .toThrow(AuditPersistenceError);
+  });
+
+  it('requirePersistence throws on DISABLED', () => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { AuditLogger: AuditLoggerV1 } = require('../src/audit');
+    const logger = new AuditLoggerV1({
+      enabled: false,
+      outputPath: path.join(tmpdir(), 'a.jsonl'),
+      requirePersistence: true
+    });
+    expect(() => logger.log(logger.createEntry('verify', 'x', { meta: {} })))
+      .toThrow(AuditPersistenceError);
   });
 });

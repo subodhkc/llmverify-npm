@@ -31,14 +31,10 @@ jobs:
       - name: Build
         run: npm run build
       
-      - name: Run unit tests
-        run: npm test -- --testPathIgnorePatterns="integration|monitor" --verbose
-      
-      - name: Test summary
-        if: always()
-        run: |
-          echo "Unit Tests Completed"
-          echo "Integration tests require server - run separately"
+      - name: Run full test suite
+        # All suites run: server tests spawn bin/llmverify-serve.js on
+        # dedicated ports with isolated LLMVERIFY_HOME per jest worker.
+        run: npm test -- --verbose
 
   lint:
     name: Lint
