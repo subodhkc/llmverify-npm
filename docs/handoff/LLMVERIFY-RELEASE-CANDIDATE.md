@@ -64,21 +64,53 @@ Not `1.6.2` — new public API surface is more than a patch. Not `2.0.0` — no 
 ## Dependency impact
 
 - New runtime deps: none.
-- `express` optional dep: floor `^4.18.2` → `^4.22.3` (patched). `overrides` pins `proxy-addr@^2.0.8` in this repo's tree — consumers of the optional server dep resolve express's own range; the residual `proxy-addr` advisory inside express 4.x is documented (affects only opt-in server mode; no upstream 4.x fix exists that includes it).
+- `express` optional dep: floor `^4.18.2` → `^4.22.3` (patched). `overrides` pins `proxy-addr@^2.0.8` for this repo's lockfile.
+- **Consumer-side audit (verified 03E):** express `~2.0.7` admits `2.0.8`, so downstream installs resolve the patched `proxy-addr@2.0.8` automatically — a clean consumer project installing the packed tarball reports **0 vulnerabilities** (`npm audit --omit=dev`), with working CJS/ESM imports, CLI, and server mode (`--port=` verified). The root `overrides` entry protects only this repo's own tree; consumers need nothing.
 - Dev-tree advisories (jest chain) are not shipped.
 
 ## Consumer compatibility requirements
 
 - `llmverify-mcp` adapter requires exactly this hardened surface — see `LLMVERIFY-MCP-COMPATIBILITY.md`. It must never silently fall back to published `1.6.1`.
 
-## Defect found in Task 03D — non-reproducible `npm pack` (P1)
+## Defect found in Task 03D — non-reproducible `npm pack` (P0, **fixed in 03E**)
 
-`files: ["docs", …]` packs whatever is on **disk**, but `.gitignore` hides a set of doc files (`*-GUIDE.md`, `AUTO-*.md`, `AI-*.md`, `docs/SERVER-MODE.md`, `docs/QUICK-START-*`, `*-PLAN.md`, …). Result: **13 files ship in a locally-built tarball that are not in git** — `AI-GUIDE.md`, `prompts/llmverify-assistants.md`, `docs/{AI-INTEGRATION,ALGORITHMS,AUTO-VERIFY-IDE,BADGE-GUIDE,ERROR-GUIDE,FOR-DEVELOPERS,IDE-INTEGRATION,INTEGRATION-GUIDE,QUICK-START-IDE,SERVER-MODE}.md`, `docs/release-1.6/01-CHANGE-PLAN.md`.
+`files: ["docs", …]` packed whatever was on **disk**, while `.gitignore` hid a set of doc files (`*-GUIDE.md`, `AUTO-*.md`, `AI-*.md`, `docs/SERVER-MODE.md`, `docs/QUICK-START-*`, `*-PLAN.md`, …). A maintainer-machine `npm pack` shipped **13 untracked files** that a clean CI checkout never produced — the registry artifact and local packs diverged.
 
-- Published `1.6.1` (built via CI clean checkout) contains **none** of them → the registry artifact and a maintainer-machine `npm pack` differ.
-- `AI-GUIDE.md` is *explicitly* whitelisted in `files` yet gitignored (`AI-*.md`) — intent conflict: either it was never meant to hide, or `files` lists it optimistically. Same class for `prompts/llmverify-assistants.md`.
-- Side effect already in flight: the vendored `llmverify-1.6.1-758c002.tgz` inside `llmverify-mcp` was built from this working tree and therefore contains these untracked docs (docs only — harmless, but provenance-relevant: the tarball is not byte-reproducible from commit `758c002` alone).
-- **Owner decision required:** (a) commit the docs and keep them public, or (b) keep them private and add `docs/.npmignore` + remove `AI-GUIDE.md`/`prompts/` from `files` so the artifact is reproducible regardless of machine state. Until decided, **publish only from a clean CI checkout / workflow** — never `npm publish` from a working tree containing untracked docs.
+**Fix applied (03E):** `files` is now an explicit **public-package allowlist** — every doc is named individually; `AI-GUIDE.md` and `prompts/` (gitignored, never shipped in any published version) were removed as dead manifest entries; `docs/handoff/` (internal release documents) is deliberately **not** listed. Directory entries remain only where extension is legitimate (`dist`, `bin`, `schema`, `examples`, `recipes`).
+
+**Enforcement:** `scripts/check-package-files.mjs` (npm script `check:package`) + jest test `tests/package-inventory.test.js` assert every shipped non-`dist/` file is git-tracked — fails loudly on drift. Verified: stray untracked files planted in `examples/` and `schema/` are caught (exit 1); clean tree passes. The publish workflow runs this check before `npm publish`.
+
+**Reproducibility test (03E):** same revision packed clean vs. with simulated untracked docs/artifacts → identical member lists (222 files). Non-byte-reproducibility caveat: npm embeds no timestamps in tar member listing but gzip headers/ordering may vary by npm version — member-list equality is asserted, not byte-identity.
+
+## Publish-pipeline hardening (03E)
+
+**Fixed in `npm-publish.yml`:**
+
+| Before | After |
+|---|---|
+| `npm test -- --testPathIgnorePatterns="integration\|monitor"` — release shipped without integration/server-suite coverage | `npm test` — full suite gates publication |
+| No typecheck step | explicit `npx tsc --noEmit` |
+| No tag↔version check — a `vX.Y.Z` tag could publish any `package.json` version | fails unless tag name equals `package.json` version |
+| No provenance-of-source check | tagged commit must be an ancestor of `origin/main` (`git merge-base --is-ancestor`) |
+| Secrets grep only | plus `scripts/check-package-files.mjs` inventory validation |
+
+**PR CI vs release CI:** PR CI = per-commit gates (install → typecheck → build → full tests × Node 18/20/22/24 → pack verify). Release CI = same gates on Node 22 + tag↔version identity + main-ancestry check + package-inventory validation + secrets scan, then trusted publishing (`--provenance`, OIDC, no token). Release gates are now a strict superset of PR gates.
+
+**`release` GitHub environment:** exists but has **no required reviewers and no deployment branch policy** (`protection_rules: []`, `can_admins_bypass: true`). A tag push alone currently reaches `npm publish`. **NEEDS_APPROVAL:** configure required reviewers on the environment (repo Settings → Environments → release).
+
+**Public document exposure (repo is public):**
+
+| Document | Classification | Note |
+|---|---|---|
+| `docs/release-1.6/*` (16 files) | PUBLIC_DOCUMENTATION | already shipped publicly in 1.6.1 |
+| `docs/handoff/LLMVERIFY-CONTRACT-AUDIT-HARDENING.md` | RELEASE_METADATA | technical change record; harmless public |
+| `docs/handoff/LLMVERIFY-MCP-READINESS.md` | REQUIRES_OWNER_REVIEW | names the private adapter repo |
+| `docs/handoff/LLMVERIFY-PUBLIC-PRIVATE-BOUNDARY.md` | REQUIRES_OWNER_REVIEW | enumerates the PRIVATE capability taxonomy (names only, no implementation) |
+| `docs/handoff/LLMVERIFY-RELEASE-CANDIDATE.md` | REQUIRES_OWNER_REVIEW | release governance, open blockers |
+| `docs/handoff/LLMVERIFY-MCP-COMPATIBILITY.md` | REQUIRES_OWNER_REVIEW | names the private adapter repo |
+| `docs/handoff/LLMVERIFY-LICENSING-REVIEW.md` | INTERNAL_HANDOFF | open legal/ownership questions |
+
+All `docs/handoff/` files are **excluded from the npm artifact** (allowlist). They remain public on the PR branch — Git history already contains them; removing them from the branch does not erase history. **Recommended:** before merge, relocate `REQUIRES_OWNER_REVIEW`/`INTERNAL_HANDOFF` documents to private storage (e.g. the private HAIEC repo or release ticket); history-remediation (if desired) is a separate owner-authorized decision — do not force-push.
 
 ## Release decision table
 
@@ -86,22 +118,37 @@ Not `1.6.2` — new public API surface is more than a patch. Not `2.0.0` — no 
 |---|---|
 | Public/private boundary audit | **READY** — no PRIVATE capabilities present; HELD items flagged for product review |
 | Export compatibility vs published 1.6.1 | **READY** — additive only |
-| Tests (37 suites / 751 tests, Node 24 local; Node 18–24 CI) | **READY** |
-| Production dependency audit | **READY** — 0 vulns after express/proxy-addr fix |
-| Artifact reproducibility (local pack ≠ git checkout) | **NEEDS_FIX** — decide (a)/(b) above; enforce clean-checkout publish in the meantime |
+| Tests (38 suites / 752 tests, Node 24 local; Node 18–24 CI) | **READY** |
+| Production dependency audit (repo + packed-artifact consumer) | **READY** — 0 vulns both sides |
+| Artifact reproducibility | **READY** — explicit allowlist + automated inventory gate; clean≡dirty member lists |
+| Publish pipeline | **READY** — full-test gate, tag↔version, main-ancestry, inventory check |
+| `release` environment approval rules | **NEEDS_APPROVAL** — no required reviewers configured today |
+| Internal handoff docs public on branch | **NEEDS_APPROVAL** — relocate to private storage before merge (npm already excludes them) |
 | Version identity `1.7.0` | **NEEDS_APPROVAL** — bump staged, not applied |
 | LICENSE/attribution (KingCaliber vs HAIEC vs Subodh KC) | **NEEDS_APPROVAL** — legal review, see LICENSING-REVIEW |
 | `cli connect`/`sync` SaaS path stays in OSS package | **NEEDS_APPROVAL** — product decision |
 | npm publish | **BLOCKED** — pending all approvals; do not publish under 1.6.1 |
+
+## Approval register (owner decisions, recommended defaults)
+
+| # | Decision | Recommended default | Consequence if declined |
+|---|---|---|---|
+| 1 | Version `1.7.0` | Approve — additive semver-minor | Re-cut version plan; do not publish under 1.6.1 |
+| 2 | LICENSE/attribution | Confirm KingCaliber Labs + HAIEC/Subodh KC relationship in writing | Hold release; legal risk on ownership |
+| 3 | `connect`/`sync` in OSS CLI | Keep (opt-in usage sync; published precedent) — never extend to evidence ingestion | Remove feature = breaking change, needs deprecation plan |
+| 4 | `release` env reviewers | Add ≥1 required reviewer | Single-tag-push can publish unreviewed |
+| 5 | Handoff docs on public branch | Relocate 4 flagged docs to private storage before merge | Internal analysis permanently public (history retains regardless) |
+| 6 | Untracked docs (`AI-GUIDE.md`, internal guides) | Decide public vs private per file; allowlist already prevents accidental shipping | No functional impact; they simply never ship |
 
 ## Staged release checklist (explicit owner approval required at each step)
 
 1. [ ] Owner approves version `1.7.0` → apply `package.json`/CHANGELOG version bump.
 2. [ ] Legal signs off LICENSE/attribution (LICENSING-REVIEW).
 3. [ ] Product signs off `connect`/`sync` remaining in the OSS CLI.
-4. [ ] Resolve the untracked-docs packaging split (commit them, or npmignore them) so `npm pack` output equals a clean-checkout build.
-5. [ ] Merge PR #21 (squash or merge per repo convention).
-6. [ ] Tag `v1.7.0` on main; publish **only** via `npm-publish.yml` (clean checkout) — never a local `npm publish`.
-7. [ ] Verify registry artifact (`npm view llmverify@1.7.0`, install smoke).
-8. [ ] Update `llmverify-mcp` dep from bundled tarball to `^1.7.0`; re-run its packed-install gate.
-9. [ ] Only then proceed to Task 04 extraction work.
+4. [ ] Relocate flagged `docs/handoff/` documents to private storage (npm artifact already excludes them via the allowlist).
+5. [ ] Configure required reviewers on the `release` GitHub environment.
+6. [ ] Merge PR #21 (squash or merge per repo convention).
+7. [ ] Tag `v1.7.0` on main; publish **only** via `npm-publish.yml` (clean checkout) — never a local `npm publish`.
+8. [ ] Verify registry artifact (`npm view llmverify@1.7.0`, install smoke).
+9. [ ] Update `llmverify-mcp` dep from bundled tarball to `^1.7.0`; re-run its packed-install gate.
+10. [ ] Only then proceed to Task 04 extraction work.

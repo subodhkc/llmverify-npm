@@ -30,7 +30,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New `getEngineCapabilities()` / `getPackageInfo()` for downstream integrations (e.g. a future MCP adapter): each capability states what it observes and what it does not establish.
 
 ### Security - dependencies
-- Optional `express` (server mode) floor raised `^4.18.2` → `^4.22.3`; `proxy-addr` overridden to `^2.0.8` for this repo's tree. Production audit clean; the residual `proxy-addr` advisory inside express 4.x is documented in `docs/handoff/LLMVERIFY-RELEASE-CANDIDATE.md`.
+- Optional `express` (server mode) floor raised `^4.18.2` → `^4.22.3`; `proxy-addr` overridden to `^2.0.8` for this repo's tree. Downstream consumers resolve patched versions automatically (verified: clean packed-install audit reports 0).
+
+### Fixed - release pipeline & packaging
+- `npm-publish.yml` no longer skips `integration|monitor` test suites before publishing; added explicit typecheck, tag↔version validation, main-ancestry check, and package-inventory validation. Full suite gates publication.
+- `files` is now an explicit allowlist of public package members — gitignored working-tree documents (`AI-GUIDE.md`, internal guides, `prompts/`) can no longer enter a locally-built tarball; `docs/handoff/` release documents are excluded from the npm artifact. `scripts/check-package-files.mjs` (`npm run check:package`) fails if any shipped non-build file is not git-tracked; covered by `tests/package-inventory.test.js`.
 
 ### Changed - verdict language
 - Server and IDE-extension verdict strings no longer equate "no findings" with "safe": `[PASS] SAFE TO USE` → `[PASS] NO ISSUES FLAGGED`; `[BLOCK] CRITICAL - DO NOT USE` → `[BLOCK] CRITICAL RISK`. `risk.action` documented as a content-risk recommendation, not authorization.
