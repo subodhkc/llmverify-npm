@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.subodhkc/llmverify",
   "title": "LLMVerify",
-  "description": "Local-first MCP server exposing the llmverify AI output verification engine — heuristic hallucination-risk signals, prompt-injection detection, PII check/redaction, JSON validation, and audit receipts over stdio. Results are risk indicators for triage, not factual verification or compliance certification.",
+  "description": "Local-first MCP server for LLM output verification — risk signals, injection and PII checks.",
   "version": "1.8.0",
   "repository": {
     "url": "https://github.com/subodhkc/llmverify-npm",
