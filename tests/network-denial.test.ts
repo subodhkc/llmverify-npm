@@ -17,7 +17,7 @@ describe('zero-network local behavior (v1.6.1)', () => {
     expect(result).toBeDefined();
     expect(result.risk).toBeDefined();
     expect(result.meta.tier).toBe('free');
-    expect(result.meta.version).toBe('1.7.0');
+    expect(result.meta.version).toBe('1.8.0');
     expect(result.schemaVersion).toBe('1.0');
   });
 
