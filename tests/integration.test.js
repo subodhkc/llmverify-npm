@@ -9,7 +9,7 @@ const path = require('path');
 describe('Integration Tests', () => {
   let serverProcess;
   const SERVER_PORT = 9009;
-  const SERVER_URL = `http://localhost:${SERVER_PORT}`;
+  const SERVER_URL = `http://127.0.0.1:${SERVER_PORT}`;
 
   beforeAll((done) => {
     // Kill any existing process on port 9009
@@ -20,11 +20,17 @@ describe('Integration Tests', () => {
     require('child_process').exec(killCmd, () => {
       // Wait for port to be released
       setTimeout(() => {
-        // Start server
-        serverProcess = spawn('node', [path.join(__dirname, '../start-server.js')], {
-          stdio: 'pipe',
-          env: { ...process.env, NODE_ENV: 'test' }
+        // Start server (isolated state dir so tests don't touch ~/.llmverify)
+        serverProcess = spawn('node', [path.join(__dirname, '../bin/llmverify-serve.js')], {
+          // stdio ignored: open child pipes cause jest worker ECONNRESET at teardown
+          stdio: 'ignore',
+          env: {
+            ...process.env,
+            NODE_ENV: 'test',
+            LLMVERIFY_HOME: require('os').tmpdir() + path.sep + 'llmverify-integration-' + process.pid
+          }
         });
+        serverProcess.unref();
 
         // Wait for server to start
         setTimeout(() => {
@@ -32,10 +38,14 @@ describe('Integration Tests', () => {
         }, 5000);
       }, 2000);
     });
-  }, 20000);
+  }, 60000);
 
   afterAll((done) => {
     if (serverProcess) {
+      // Destroy pooled keep-alive sockets BEFORE the server dies —
+      // otherwise their ECONNRESET propagates as an uncaught error and
+      // jest reports the whole suite as failed.
+      http.globalAgent.destroy();
       serverProcess.kill();
       setTimeout(done, 1000);
     } else {
@@ -62,12 +72,11 @@ describe('Integration Tests', () => {
     }, 10000);
   });
 
-  describe('Content Verification Scenarios', () => {
-    function verifyContent(content) {
+  function verifyContent(content) {
       return new Promise((resolve, reject) => {
         const data = JSON.stringify({ content });
         const options = {
-          hostname: 'localhost',
+          hostname: '127.0.0.1',
           port: SERVER_PORT,
           path: '/verify',
           method: 'POST',
@@ -97,6 +106,7 @@ describe('Integration Tests', () => {
       });
     }
 
+  describe('Content Verification Scenarios', () => {
     test('Scenario 1: Simple safe content', async () => {
       const content = 'Hello, this is a simple test message.';
       const result = await verifyContent(content);
@@ -233,7 +243,7 @@ useEffect runs side effects after render.
     test('should handle invalid JSON', (done) => {
       const data = 'invalid json';
       const options = {
-        hostname: 'localhost',
+        hostname: '127.0.0.1',
         port: SERVER_PORT,
         path: '/verify',
         method: 'POST',
@@ -256,7 +266,7 @@ useEffect runs side effects after render.
     test('should handle missing content field', (done) => {
       const data = JSON.stringify({ notContent: 'test' });
       const options = {
-        hostname: 'localhost',
+        hostname: '127.0.0.1',
         port: SERVER_PORT,
         path: '/verify',
         method: 'POST',
@@ -289,7 +299,7 @@ useEffect runs side effects after render.
       
       const data = JSON.stringify({ content });
       const options = {
-        hostname: 'localhost',
+        hostname: '127.0.0.1',
         port: SERVER_PORT,
         path: '/verify',
         method: 'POST',
@@ -325,7 +335,7 @@ useEffect runs side effects after render.
         
         return new Promise((resolve) => {
           const options = {
-            hostname: 'localhost',
+            hostname: '127.0.0.1',
             port: SERVER_PORT,
             path: '/verify',
             method: 'POST',

@@ -95,7 +95,7 @@ Waiting for AI responses...
 ║  VERIFICATION RESULT                                                         ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 
-  Verdict:      [PASS] SAFE TO USE
+  Verdict:      [PASS] NO ISSUES FLAGGED
   Risk Level:   LOW
   Risk Score:   6.3%
   Explanation:  Content passed all safety checks
@@ -192,7 +192,7 @@ const result = await verify('AI response text here');
 
 console.log(result.result.risk.overall);  // 0.172 (17.2%)
 console.log(result.result.risk.level);    // "low"
-console.log(result.summary.verdict);      // "[PASS] SAFE TO USE"
+console.log(result.summary.verdict);      // "[PASS] NO ISSUES FLAGGED"
 ```
 
 ### In Express API

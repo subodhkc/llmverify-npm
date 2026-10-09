@@ -4,14 +4,16 @@
 
 llmverify assigns a risk score from 0-100% to every AI response. This score represents the likelihood that the content contains issues like hallucinations, security vulnerabilities, PII, or inconsistencies.
 
+**Important:** the `risk.action` field (`allow` / `review` / `block`) is a **content-risk recommendation** for triage. It is a heuristic screening signal — it is not evidence that an action was authorized, that a control was satisfied, or that the content is factually correct. A `block` recommendation does not enforce anything by itself, and an `allow` recommendation does not certify safety or completeness of the checks performed.
+
 ---
 
 ## Risk Level Definitions
 
 ### LOW (0-25%)
-**Status:** Safe to use  
+**Status:** No issues flagged  
 **Color:** Green  
-**Action:** Content is verified and safe
+**Action:** No risk indicators above the review threshold — see the result's `limitations` and `notChecked` fields for what was not assessed
 
 **What it means:**
 - No significant issues detected

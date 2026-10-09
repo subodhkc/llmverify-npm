@@ -83,6 +83,20 @@ export class ConfigurationError extends LLMVerifyError {
 }
 
 /**
+ * Audit persistence error
+ *
+ * Thrown when the caller requires durable audit persistence
+ * (evidence-required mode) and the write fails. Never thrown by
+ * default — developer mode records the failure as a status instead.
+ */
+export class AuditPersistenceError extends LLMVerifyError {
+  constructor(message: string, details?: any, requestId?: string) {
+    super(message, ErrorCode.AUDIT_PERSISTENCE_FAILED, details, requestId);
+    this.name = 'AuditPersistenceError';
+  }
+}
+
+/**
  * Engine error
  */
 export class EngineError extends LLMVerifyError {

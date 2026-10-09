@@ -15,11 +15,11 @@ import chalk from 'chalk';
 import Table from 'cli-table3';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as os from 'os';
 import { verify } from './verify';
 import { VERSION, PRIVACY_GUARANTEE } from './constants';
 import { Config, DEFAULT_CONFIG } from './types/config';
 import { VerifyResult, Finding } from './types/results';
+import { getConfigDir } from './paths';
 
 const program = new Command();
 
@@ -687,7 +687,7 @@ function printRunResult(result: CoreRunResult): void {
   if (result.inputSafety) {
     console.log(chalk.bold('Input Safety'));
     console.log(chalk.gray('─'.repeat(40)));
-    const safeIcon = result.inputSafety.safe ? chalk.green('[OK] Safe') : chalk.red('[FAIL] Unsafe');
+    const safeIcon = result.inputSafety.safe ? chalk.green('[OK] No injection indicators') : chalk.red('[FAIL] Injection indicators found');
     console.log(`  Status:   ${safeIcon}`);
     console.log(`  Findings: ${result.inputSafety.injectionFindings.length}`);
     console.log();
@@ -1265,8 +1265,13 @@ function printTextResult(result: VerifyResult, verbose: boolean): void {
 // COMMAND: connect (Opt-in dashboard connection)
 // ============================================================================
 
-const CONFIG_DIR = path.join(os.homedir(), '.llmverify');
-const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
+// Resolved lazily so LLMVERIFY_HOME / LLMVERIFY_CONFIG_DIR env overrides apply.
+function configDir(): string {
+  return getConfigDir();
+}
+function configFile(): string {
+  return path.join(configDir(), 'config.json');
+}
 
 interface DashboardConfig {
   apiKey?: string;
@@ -1277,8 +1282,8 @@ interface DashboardConfig {
 
 function readDashboardConfig(): DashboardConfig {
   try {
-    if (fs.existsSync(CONFIG_FILE)) {
-      return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'));
+    if (fs.existsSync(configFile())) {
+      return JSON.parse(fs.readFileSync(configFile(), 'utf-8'));
     }
   } catch {
     // Corrupted config — return empty
@@ -1288,10 +1293,10 @@ function readDashboardConfig(): DashboardConfig {
 
 function writeDashboardConfig(config: DashboardConfig): void {
   try {
-    if (!fs.existsSync(CONFIG_DIR)) {
-      fs.mkdirSync(CONFIG_DIR, { recursive: true });
+    if (!fs.existsSync(configDir())) {
+      fs.mkdirSync(configDir(), { recursive: true });
     }
-    fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), { mode: 0o600 });
+    fs.writeFileSync(configFile(), JSON.stringify(config, null, 2), { mode: 0o600 });
   } catch (err) {
     console.error(chalk.red(`Failed to write config: ${(err as Error).message}`));
   }
@@ -1346,7 +1351,7 @@ program
       console.log(chalk.green('[OK] Connected to HAIEC Dashboard'));
       console.log(`  ${chalk.cyan('Tier:')}      ${config.tier}`);
       console.log(`  ${chalk.cyan('API URL:')}   ${config.apiUrl}`);
-      console.log(`  ${chalk.cyan('Config:')}    ${CONFIG_FILE}`);
+      console.log(`  ${chalk.cyan('Config:')}    ${configFile()}`);
       console.log();
       console.log(chalk.dim('Your free tier still works 100% locally with zero network.'));
       console.log(chalk.dim('Dashboard connection is opt-in — use "npx llmverify sync" to push usage.'));

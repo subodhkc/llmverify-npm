@@ -23,7 +23,8 @@ const LIMITATIONS = [
 const METHODOLOGY =
   'Regex-based pattern matching for common PII formats. ' +
   'Detects emails, phone numbers, SSNs, credit cards, API keys, and more. ' +
-  'Accuracy: ~90% for standard formats, lower for variations.';
+  'Coverage is heuristic and not empirically calibrated — ' +
+  'non-standard formats may be missed.';
 
 interface PIIPattern {
   name: string;

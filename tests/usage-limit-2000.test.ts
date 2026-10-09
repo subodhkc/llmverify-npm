@@ -1,11 +1,21 @@
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+
+// Isolate the usage file for this test file — jest runs suites in
+// parallel workers that would otherwise race on the shared
+// ~/.llmverify/usage.json.
+const TEST_USAGE_FILE = path.join(
+  fs.mkdtempSync(path.join(os.tmpdir(), 'llmverify-usage-')),
+  'usage.json'
+);
+process.env.LLMVERIFY_USAGE_FILE = TEST_USAGE_FILE;
+
 import { TIER_USAGE_LIMITS } from '../src/types/config';
 import { checkUsageLimit } from '../src/usage/limits';
 import { resetUsage } from '../src/usage/tracker';
 
-const USAGE_FILE = path.join(os.homedir(), '.llmverify', 'usage.json');
+const USAGE_FILE = TEST_USAGE_FILE;
 
 function setUsage(calls: number, date = getToday()): void {
   const usage = {

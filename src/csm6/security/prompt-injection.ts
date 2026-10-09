@@ -24,8 +24,9 @@ const LIMITATIONS = [
 const METHODOLOGY =
   'OWASP LLM-01 aligned pattern matching. ' +
   'Detects known prompt injection techniques using regex patterns ' +
-  'validated against public attack datasets (HackAPrompt, Gandalf, etc). ' +
-  'Accuracy: ~70-85% on known attacks, lower on novel variations.';
+  'informed by public attack datasets (HackAPrompt, Gandalf, etc). ' +
+  'Coverage of known patterns is not a calibrated accuracy metric — ' +
+  'novel or obfuscated attacks may evade detection.';
 
 interface PatternConfig {
   patterns: RegExp[];

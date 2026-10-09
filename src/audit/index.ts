@@ -1,10 +1,15 @@
 /**
- * Audit Logger
- * 
+ * Audit Logger (v1 API)
+ *
  * Local-only audit logging for verification results.
  * Supports file output and optional GitHub export.
  * No external API calls - all processing is local.
- * 
+ *
+ * Note: src/logging/audit.ts provides the newer AuditLogger used by
+ * verify(). This module is retained for backward compatibility and now
+ * shares the same integrity primitives (canonical digests, explicit
+ * hash algorithms, persistence receipts) via src/audit/integrity.ts.
+ *
  * @module audit
  * @author llmverify
  * @license MIT
@@ -12,6 +17,14 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import {
+  AuditWriteResult,
+  ContentHashAlgorithm,
+  hashContent,
+  persistenceResult
+} from './integrity';
+
+export type { AuditWriteResult, AuditPersistenceStatus } from './integrity';
 
 export interface AuditEntry {
   id: string;
@@ -19,7 +32,15 @@ export interface AuditEntry {
   action: 'verify' | 'classify' | 'check_pii' | 'check_injection' | 'run';
   input: {
     contentLength: number;
+    /**
+     * Self-describing hash. v1.7+ emits 'sha256:<hex>' (or
+     * 'hmac-sha256:<hex>' when hashKey is configured, 'legacy:<hex>'
+     * under hashAlgorithm 'legacy'). Pre-1.7 records contain an
+     * unlabelled 8-char non-cryptographic hash.
+     */
     contentHash: string;
+    /** Algorithm used for contentHash (v1.7+ records) */
+    contentHashAlgorithm?: ContentHashAlgorithm | 'none';
     preset?: string;
   };
   output: {
@@ -40,7 +61,31 @@ export interface AuditConfig {
   outputPath?: string;
   maxEntries?: number;
   rotateDaily?: boolean;
+  /**
+   * Record a content hash. Default true.
+   * WARNING: unkeyed hashes of low-entropy content can be reversed by
+   * guessing. Set false or use hashKey for sensitive workloads.
+   */
   includeContentHash?: boolean;
+  /**
+   * Hash algorithm for contentHash.
+   *   'sha256'      — default, integrity-grade
+   *   'hmac-sha256' — keyed (requires hashKey); preferred for
+   *                   low-entropy/sensitive content
+   *   'legacy'      — deprecated non-cryptographic hash, retained only
+   *                   to reproduce pre-1.7 records
+   */
+  hashAlgorithm?: ContentHashAlgorithm;
+  /** Key for 'hmac-sha256' content hashing */
+  hashKey?: string;
+  /**
+   * Evidence-required mode: when true, a failed audit write throws
+   * AuditPersistenceError instead of recording status FAILED.
+   * Default false (developer mode).
+   */
+  requirePersistence?: boolean;
+  /** Observer invoked with each write outcome */
+  onWriteResult?: (result: AuditWriteResult) => void;
 }
 
 const DEFAULT_CONFIG: AuditConfig = {
@@ -48,21 +93,9 @@ const DEFAULT_CONFIG: AuditConfig = {
   outputPath: './llmverify-audit.jsonl',
   maxEntries: 10000,
   rotateDaily: true,
-  includeContentHash: true
+  includeContentHash: true,
+  hashAlgorithm: 'sha256'
 };
-
-/**
- * Simple hash function for content (no crypto dependency)
- */
-function simpleHash(str: string): string {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
-  }
-  return Math.abs(hash).toString(16).padStart(8, '0');
-}
 
 /**
  * Generate unique ID
@@ -80,6 +113,7 @@ export class AuditLogger {
   private config: AuditConfig;
   private entries: AuditEntry[] = [];
   private currentDate: string = '';
+  private lastPersistence: AuditWriteResult = persistenceResult('NOT_ATTEMPTED');
 
   constructor(config: Partial<AuditConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -87,11 +121,24 @@ export class AuditLogger {
   }
 
   /**
-   * Log a verification action
+   * Log a verification action.
+   *
+   * Returns the stored entry. The actual persistence outcome is
+   * available via getLastPersistence() or the logDetailed() form —
+   * a returned entry does NOT by itself prove the record was written
+   * to disk.
    */
   log(entry: Omit<AuditEntry, 'id' | 'timestamp'>): AuditEntry {
+    return this.logDetailed(entry).entry;
+  }
+
+  /**
+   * Log an entry and receive both the entry and its persistence receipt.
+   */
+  logDetailed(entry: Omit<AuditEntry, 'id' | 'timestamp'>): { entry: AuditEntry; persistence: AuditWriteResult } {
     if (!this.config.enabled) {
-      return { ...entry, id: '', timestamp: '' };
+      this.lastPersistence = this.report(persistenceResult('DISABLED'));
+      return { entry: { ...entry, id: '', timestamp: '' }, persistence: this.lastPersistence };
     }
 
     const fullEntry: AuditEntry = {
@@ -104,15 +151,39 @@ export class AuditLogger {
 
     // Write to file if configured
     if (this.config.outputPath) {
-      this.writeToFile(fullEntry);
+      this.lastPersistence = this.writeToFile(fullEntry);
+    } else {
+      this.lastPersistence = persistenceResult('NOT_ATTEMPTED');
     }
+    this.report(this.lastPersistence);
 
     // Rotate if needed
     if (this.entries.length > (this.config.maxEntries || 10000)) {
       this.entries = this.entries.slice(-1000);
     }
 
-    return fullEntry;
+    return { entry: fullEntry, persistence: this.lastPersistence };
+  }
+
+  /**
+   * Outcome of the most recent write attempt by this logger.
+   */
+  getLastPersistence(): AuditWriteResult {
+    return this.lastPersistence;
+  }
+
+  /**
+   * Compute the content hash for an entry input according to config.
+   */
+  private computeContentHash(content: string): { hash: string; algorithm: ContentHashAlgorithm | 'none' } {
+    if (!this.config.includeContentHash) {
+      return { hash: '', algorithm: 'none' };
+    }
+    const algorithm = this.config.hashAlgorithm || 'sha256';
+    return {
+      hash: hashContent(content, { algorithm, key: this.config.hashKey }),
+      algorithm
+    };
   }
 
   /**
@@ -128,11 +199,13 @@ export class AuditLogger {
     },
     preset?: string
   ): Omit<AuditEntry, 'id' | 'timestamp'> {
+    const { hash, algorithm } = this.computeContentHash(content);
     return {
       action,
       input: {
         contentLength: content.length,
-        contentHash: this.config.includeContentHash ? simpleHash(content) : '',
+        contentHash: hash,
+        contentHashAlgorithm: algorithm,
         preset
       },
       output: {
@@ -149,10 +222,37 @@ export class AuditLogger {
   }
 
   /**
-   * Write entry to file (JSONL format)
+   * Report a persistence outcome; escalate to a typed error when the
+   * caller required durable persistence.
    */
-  private writeToFile(entry: AuditEntry): void {
-    if (!this.config.outputPath) return;
+  private report(result: AuditWriteResult): AuditWriteResult {
+    try {
+      this.config.onWriteResult?.(result);
+    } catch {
+      // Observer failures must not break verification
+    }
+    // Evidence-required mode: only PERSISTED is acceptable. DISABLED and
+    // NOT_ATTEMPTED mean no record was stored — escalate them too.
+    if (this.config.requirePersistence && result.status !== 'PERSISTED') {
+      const { AuditPersistenceError } = require('../errors');
+      const reason = result.status === 'DISABLED'
+        ? 'audit logging is disabled'
+        : result.status === 'NOT_ATTEMPTED'
+          ? 'no audit target was configured'
+          : result.error || 'unknown error';
+      throw new AuditPersistenceError(
+        `Audit persistence required but status was ${result.status}: ${reason}`,
+        { status: result.status, filePath: result.filePath }
+      );
+    }
+    return result;
+  }
+
+  /**
+   * Write entry to file (JSONL format). Returns the actual outcome.
+   */
+  private writeToFile(entry: AuditEntry): AuditWriteResult {
+    if (!this.config.outputPath) return persistenceResult('NOT_ATTEMPTED');
 
     try {
       // Check for daily rotation
@@ -169,9 +269,16 @@ export class AuditLogger {
       // Append to file
       const line = JSON.stringify(entry) + '\n';
       fs.appendFileSync(filePath, line, 'utf-8');
+      return persistenceResult('PERSISTED', { filePath });
     } catch (error) {
-      // Silently fail - audit should not break main functionality
-      console.error('[llmverify audit] Failed to write:', error);
+      // Audit must not break main functionality unless the caller
+      // explicitly required persistence (handled by report()).
+      if (process.env.NODE_ENV === 'development') {
+        console.error('[llmverify audit] Failed to write:', error);
+      }
+      return persistenceResult('FAILED', {
+        error: (error as Error).message
+      });
     }
   }
 
@@ -312,7 +419,7 @@ export function auditLog(
 ): AuditEntry | null {
   const logger = getAuditLogger();
   if (!logger) return null;
-  
+
   const entry = logger.createEntry(action, content, result, preset);
   return logger.log(entry);
 }

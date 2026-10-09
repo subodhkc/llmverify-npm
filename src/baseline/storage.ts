@@ -2,13 +2,27 @@
  * Baseline Drift Storage and Calibration
  * 
  * Tracks baseline metrics and detects drift over time
+ *
+ * Concurrency notes:
+ * - All file writes use atomic replacement (write to a unique temp file
+ *   in the same directory, then rename). Readers can never observe a
+ *   partially written baseline file.
+ * - Reads and writes are synchronous, so operations within a single
+ *   process are serialized by the event loop.
+ * - ACROSS PROCESSES (e.g. parallel test workers sharing a directory),
+ *   atomic replacement prevents torn reads but does not prevent
+ *   read-modify-write lost updates: two processes may load the same
+ *   baseline, apply different samples, and the last rename wins. This
+ *   is acceptable for drift baselines (a heuristic calibration aid,
+ *   not a ledger); callers needing strictly serialized multi-process
+ *   updates must coordinate externally or use separate state dirs.
  * 
  * @module baseline/storage
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
-import * as os from 'os';
+import { getBaselineDir } from '../paths';
 
 /**
  * Baseline metrics
@@ -63,7 +77,7 @@ export interface BaselineConfig {
  * Default configuration
  */
 const DEFAULT_CONFIG: BaselineConfig = {
-  baselineDir: path.join(os.homedir(), '.llmverify', 'baseline'),
+  baselineDir: undefined, // resolved via getBaselineDir() (LLMVERIFY_BASELINE_DIR / LLMVERIFY_HOME)
   driftThreshold: 20, // 20% drift triggers warning
   maxDriftHistory: 1000,
   autoCalibrate: false
@@ -79,8 +93,9 @@ export class BaselineStorage {
   
   constructor(config?: Partial<BaselineConfig>) {
     this.config = { ...DEFAULT_CONFIG, ...config };
-    this.baselineFile = path.join(this.config.baselineDir!, 'baseline.json');
-    this.driftFile = path.join(this.config.baselineDir!, 'drift-history.jsonl');
+    const dir = this.config.baselineDir || getBaselineDir();
+    this.baselineFile = path.join(dir, 'baseline.json');
+    this.driftFile = path.join(dir, 'drift-history.jsonl');
     this.ensureDirectory();
   }
   
@@ -88,17 +103,59 @@ export class BaselineStorage {
    * Ensure baseline directory exists
    */
   private ensureDirectory(): void {
-    if (this.config.baselineDir) {
+    const dir = this.config.baselineDir || getBaselineDir();
+    if (dir) {
       try {
-        fs.mkdirSync(this.config.baselineDir, { recursive: true });
+        fs.mkdirSync(dir, { recursive: true });
       } catch (error) {
         console.error('Failed to create baseline directory:', error);
       }
     }
   }
   
+  /** Sequence for unique temp-file names in atomic writes. */
+  private static writeSequence = 0;
+
   /**
-   * Load baseline metrics
+   * Write data to `file` atomically: serialize to a unique temp file in
+   * the same directory, then rename over the target. Concurrent readers
+   * never observe a partially written file.
+   */
+  private writeFileAtomic(file: string, data: string): void {
+    const tmp = `${file}.${process.pid}.${++BaselineStorage.writeSequence}.tmp`;
+    try {
+      fs.writeFileSync(tmp, data, 'utf-8');
+      fs.renameSync(tmp, file);
+    } catch (error) {
+      // Best-effort cleanup of the temp file; never leak partial writes
+      try { if (fs.existsSync(tmp)) fs.unlinkSync(tmp); } catch { /* ignore */ }
+      throw error;
+    }
+  }
+
+  /**
+   * Quarantine a corrupted state file so the error is reported once
+   * rather than on every read. Renames to `<file>.corrupt-<ts>`.
+   * No file contents are logged — only the parse error message.
+   */
+  private quarantineCorrupt(file: string): void {
+    try {
+      const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+      fs.renameSync(file, `${file}.corrupt-${stamp}`);
+    } catch {
+      // Quarantine is best-effort; the read failure is still reported
+    }
+  }
+
+  /** Signature of the last corrupted file already reported (dedupe). */
+  private lastCorruptSignature: string | null = null;
+
+  /**
+   * Load baseline metrics. A corrupted file is quarantined and treated
+   * as "no baseline" — recovery starts fresh instead of failing forever.
+   * The error is reported once per corrupted file state; if quarantine
+   * transiently fails (e.g. an OS-level file lock), repeated reads do
+   * not spam diagnostics.
    */
   public loadBaseline(): BaselineMetrics | null {
     if (!fs.existsSync(this.baselineFile)) {
@@ -107,25 +164,39 @@ export class BaselineStorage {
     
     try {
       const content = fs.readFileSync(this.baselineFile, 'utf-8');
-      return JSON.parse(content);
+      const parsed = JSON.parse(content);
+      this.lastCorruptSignature = null;
+      return parsed;
     } catch (error) {
-      console.error('Failed to load baseline:', error);
+      let signature = 'unknown';
+      try {
+        const stat = fs.statSync(this.baselineFile);
+        signature = `${stat.size}:${stat.mtimeMs}`;
+      } catch { /* keep 'unknown' */ }
+      if (signature !== this.lastCorruptSignature) {
+        this.lastCorruptSignature = signature;
+        // Never log file contents — only the parse error message
+        console.error(
+          'Failed to load baseline (file quarantined, starting fresh):',
+          (error as Error).message
+        );
+      }
+      this.quarantineCorrupt(this.baselineFile);
       return null;
     }
   }
   
   /**
-   * Save baseline metrics
+   * Save baseline metrics (atomic replace)
    */
   public saveBaseline(baseline: BaselineMetrics): void {
     try {
-      fs.writeFileSync(
+      this.writeFileAtomic(
         this.baselineFile,
-        JSON.stringify(baseline, null, 2),
-        'utf-8'
+        JSON.stringify(baseline, null, 2)
       );
     } catch (error) {
-      console.error('Failed to save baseline:', error);
+      console.error('Failed to save baseline:', (error as Error).message);
     }
   }
   
@@ -316,7 +387,7 @@ export class BaselineStorage {
       
       if (lines.length > this.config.maxDriftHistory!) {
         const trimmed = lines.slice(-this.config.maxDriftHistory!);
-        fs.writeFileSync(this.driftFile, trimmed.join('\n') + '\n', 'utf-8');
+        this.writeFileAtomic(this.driftFile, trimmed.join('\n') + '\n');
       }
     } catch (error) {
       console.error('Failed to trim drift history:', error);

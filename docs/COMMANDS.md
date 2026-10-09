@@ -168,7 +168,7 @@ VERIFYING: Checking AI response...
 ║  VERIFICATION RESULT                                                         ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 
-  Verdict:      [PASS] SAFE TO USE
+  Verdict:      [PASS] NO ISSUES FLAGGED
   Risk Level:   LOW
   Risk Score:   11.2%
   Explanation:  This AI response passed all safety checks.

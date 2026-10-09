@@ -5,6 +5,47 @@ All notable changes to llmverify will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [1.7.0] - 2026-10-09
+
+### Fixed - verification result contract
+- `schema/verify-result.schema.json` now matches the actual `verify()` output (`schemaVersion`, engine-keyed optional results, `risk.overall`, `meta`, `limitations`, `notChecked`) instead of requiring fields the runtime never emitted (`findings`, `engines`, `metadata`, `risk.score`). A versioned copy ships at `schema/verify-result-1.0.schema.json`.
+- `src/types/results.ts` now declares runtime fields that were previously missing (`Claim.riskIndicators` sub-scores, `warnings`, `audit` receipt).
+- New `validateVerifyResult()` runtime validator and `RESULT_SCHEMA_VERSION` export; `getVerifyResultSchemaPath()` locates the packaged schema for downstream consumers.
+
+### Fixed - audit integrity & persistence
+- Shared integrity layer (`src/audit/integrity.ts`): canonical JSON serialization, self-describing `sha256:`/`hmac-sha256:`/`legacy:` content hashes, per-entry `sha256` digests with constant-time verification.
+- `src/audit/index.ts` (legacy API preserved) now uses the same cryptographic hashing as `src/logging/audit.ts`; `contentHashAlgorithm` labels stored hashes so historical records stay interpretable.
+- Audit writes return an explicit `AuditWriteResult` receipt: `PERSISTED` / `DISABLED` / `FAILED` / `NOT_ATTEMPTED`. `verify()` surfaces it at `result.audit` (and via `audit.onResult`); `audit.requirePersistence: true` throws the new typed `AuditPersistenceError` (`LLMVERIFY_8001`) when a durable record is required but the write fails.
+- `verifyAuditFile()` reports `verified`/`tampered`/`unverifiable` per entry; legacy pre-digest records are unverifiable rather than silently trusted.
+
+### Fixed - `llmverify-serve` bin
+- The server bin now actually starts: it invokes `startServer()` explicitly (the previous `require()` never triggered the `require.main` guard). `--port`/`--host` args are parsed and validated.
+
+### Changed - privacy & local-state configurability
+- All local state paths centralized in `src/paths.ts`: `LLMVERIFY_HOME` relocates the whole `~/.llmverify` tree; `LLMVERIFY_LOG_DIR`, `LLMVERIFY_AUDIT_DIR`, `LLMVERIFY_BASELINE_DIR`, `LLMVERIFY_USAGE_FILE`, `LLMVERIFY_CONFIG_DIR` override individually.
+- Audit content hashing can be keyed (`hashKey` / `LLMVERIFY_AUDIT_HASH_KEY`) or disabled (`includeContentHash: false` / `LLMVERIFY_AUDIT_NO_CONTENT_HASH=1`) for low-entropy or sensitive workloads.
+- Logger sanitization strengthened for nested objects and common secret-key variants. No raw content is written to audit records by default; zero-network behavior unchanged.
+
+### Changed - truthful capability metadata
+- New `getEngineCapabilities()` / `getPackageInfo()` for downstream integrations (e.g. a future MCP adapter): each capability states what it observes and what it does not establish.
+
+### Security - dependencies
+- Optional `express` (server mode) floor raised `^4.18.2` → `^4.22.3`; `proxy-addr` overridden to `^2.0.8` for this repo's tree. Downstream consumers resolve patched versions automatically (verified: clean packed-install audit reports 0).
+
+### Fixed - release pipeline & packaging
+- `npm-publish.yml` no longer skips `integration|monitor` test suites before publishing; added explicit typecheck, tag↔version validation, main-ancestry check, and package-inventory validation. Full suite gates publication.
+- `files` is now an explicit allowlist of public package members — gitignored working-tree documents (`AI-GUIDE.md`, internal guides, `prompts/`) can no longer enter a locally-built tarball; `docs/handoff/` release documents are excluded from the npm artifact. `scripts/check-package-files.mjs` (`npm run check:package`) fails if any shipped non-build file is not git-tracked; covered by `tests/package-inventory.test.js`.
+
+### Changed - verdict language
+- Server and IDE-extension verdict strings no longer equate "no findings" with "safe": `[PASS] SAFE TO USE` → `[PASS] NO ISSUES FLAGGED`; `[BLOCK] CRITICAL - DO NOT USE` → `[BLOCK] CRITICAL RISK`. `risk.action` documented as a content-risk recommendation, not authorization.
+- Methodology strings in the harmful-content, PII, and prompt-injection detectors no longer assert unsupported accuracy percentages.
+
+### Fixed - test infrastructure
+- `tests/integration.test.js` and `tests/monitor.test.js` now spawn the real `bin/llmverify-serve.js` on distinct ports with isolated `LLMVERIFY_HOME`, and clean up keep-alive sockets that crashed jest workers.
+- `tests/usage-limit-2000.test.ts` uses an isolated usage file (fixes cross-worker races on `~/.llmverify/usage.json`).
+
 ## [1.6.1] - 2026-08-21
 
 ### Fixed - PII redaction false negatives

@@ -23,7 +23,8 @@ const LIMITATIONS = [
 const METHODOLOGY =
   'Keyword pattern matching for harmful content categories. ' +
   'Detects violence, threats, self-harm, and dangerous instructions. ' +
-  'Accuracy: ~60% recall, requires human validation.';
+  'Detection rates are heuristic and not empirically calibrated — ' +
+  'absence of findings is not proof of safety. Requires human validation.';
 
 interface HarmPattern {
   category: string;

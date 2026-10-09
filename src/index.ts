@@ -60,7 +60,7 @@
  * @module llmverify
  * @author Haiec
  * @license MIT
- * @version 1.6.1
+ * @version 1.7.0
  */
 
 // Main verification function
@@ -276,7 +276,63 @@ export {
 // Logging & Audit (v1.4.0)
 export { Logger, LogLevel, getLogger, setLogger, resetLogger } from './logging/logger';
 export type { LogEntry, LoggerConfig } from './logging/logger';
+export {
+  AuditLogger as AuditLoggerV2,
+  getAuditLogger as getAuditLoggerV2,
+  setAuditLogger,
+  resetAuditLogger
+} from './logging/audit';
 export type { AuditEntry as AuditEntryV2, AuditConfig as AuditConfigV2 } from './logging/audit';
+
+// Audit Integrity & Persistence Contract (v1.7)
+// Shared primitives used by both audit implementations. A content hash
+// or entry digest proves INTEGRITY (what was recorded, unmodified) — it
+// is not a digital signature and does not prove producer authenticity.
+export {
+  canonicalize,
+  hashContent,
+  digestAuditEntry,
+  verifyAuditEntry,
+  withIntegrity,
+  persistenceResult,
+  AUDIT_DIGEST_SCHEMA_VERSION
+} from './audit/integrity';
+export type {
+  AuditWriteResult,
+  AuditPersistenceStatus,
+  AuditEntryIntegrity,
+  ContentHashAlgorithm
+} from './audit/integrity';
+export type { VerificationAuditStatus } from './types/results';
+
+// Result Contract (v1.7)
+// Dependency-free validation for verify() output; the packaged JSON
+// Schema (schema/verify-result.schema.json) describes the same contract.
+export {
+  RESULT_SCHEMA_VERSION,
+  RESULT_SCHEMA_FILE,
+  validateVerifyResult,
+  getVerifyResultSchemaPath
+} from './result-contract';
+
+// Engine Capability Discovery (v1.7)
+// Static, truthful capability metadata for downstream integrations
+// (e.g. a future MCP adapter) — no internal imports required.
+export { getEngineCapabilities, getPackageInfo } from './capabilities';
+export type { EngineCapability } from './capabilities';
+
+// Local state locations (v1.7)
+// All llmverify state is local-only. These resolve LLMVERIFY_HOME and
+// per-directory env overrides — useful for embedders documenting where
+// data lives and for tests isolating state.
+export {
+  getLLMVerifyHome,
+  getLogDir,
+  getAuditDir,
+  getBaselineDir,
+  getUsageFile,
+  getConfigDir
+} from './paths';
 
 // Baseline & Drift Detection (v1.4.0)
 export { BaselineStorage, getBaselineStorage, resetBaselineStorage } from './baseline/storage';

@@ -110,10 +110,10 @@ function formatHumanReadable(result: VerifyResult): {
   
   switch (risk.level) {
     case 'low':
-      verdict = '[PASS] SAFE TO USE';
-      explanation = 'This AI response passed all safety checks. No significant risks detected.';
+      verdict = '[PASS] NO ISSUES FLAGGED';
+      explanation = 'This AI response completed heuristic screening. No significant risks detected within the checks performed — see limitations for what was not assessed.';
       nextSteps = [
-        'You can use this content confidently',
+        'Review the limitations and notChecked fields before relying on this result',
         'Standard human review is still recommended for important decisions',
         'Continue monitoring future AI outputs'
       ];
@@ -129,7 +129,7 @@ function formatHumanReadable(result: VerifyResult): {
       ];
       break;
     case 'high':
-      verdict = '[FAIL] HIGH RISK - CAUTION';
+      verdict = '[FAIL] HIGH RISK';
       explanation = 'Significant risks detected. Do not use without thorough review and revision.';
       nextSteps = [
         'DO NOT use this content as-is',
@@ -140,7 +140,7 @@ function formatHumanReadable(result: VerifyResult): {
       ];
       break;
     case 'critical':
-      verdict = '[BLOCK] CRITICAL - DO NOT USE';
+      verdict = '[BLOCK] CRITICAL RISK';
       explanation = 'Critical safety issues detected. This content should not be used.';
       nextSteps = [
         'BLOCK this content immediately',
