@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-10-09
+
 ### Fixed - verification result contract
 - `schema/verify-result.schema.json` now matches the actual `verify()` output (`schemaVersion`, engine-keyed optional results, `risk.overall`, `meta`, `limitations`, `notChecked`) instead of requiring fields the runtime never emitted (`findings`, `engines`, `metadata`, `risk.score`). A versioned copy ships at `schema/verify-result-1.0.schema.json`.
 - `src/types/results.ts` now declares runtime fields that were previously missing (`Claim.riskIndicators` sub-scores, `warnings`, `audit` receipt).

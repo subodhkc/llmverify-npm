@@ -9,7 +9,7 @@ Local-first verification, PII redaction, prompt-injection defense, and runtime m
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 **Last Updated:** August 21, 2026
-**Version:** 1.6.1
+**Version:** 1.7.0
 **Node:** >= 18.0.0
 **License:** MIT
 
