@@ -33,7 +33,13 @@ const packJson = execSync('npm pack --dry-run --json', {
 // fail loudly rather than silently validating an empty file list.
 const jsonStart = packJson.search(/[\[{]/);
 const parsed = jsonStart === -1 ? null : JSON.parse(packJson.slice(jsonStart));
-const packEntries = Array.isArray(parsed) ? parsed : parsed ? [parsed] : [];
+const packEntries = Array.isArray(parsed)
+  ? parsed
+  : parsed && Array.isArray(parsed.files)
+    ? [parsed]
+    : parsed && typeof parsed === 'object'
+      ? Object.values(parsed) // npm ≥11.7: map keyed by package name
+      : [];
 const packInfo = packEntries.find((e) => e && Array.isArray(e.files));
 if (!packInfo) {
   console.error('[package-files] FAIL: `npm pack --dry-run --json` returned an unexpected shape');
