@@ -123,6 +123,34 @@ The server binds to `127.0.0.1` by default, restricts CORS to localhost origins,
 
 ---
 
+## MCP server
+
+llmverify ships a built-in [Model Context Protocol](https://modelcontextprotocol.io) server — the same engine, exposed to MCP-compatible agents and IDEs over stdio:
+
+```bash
+npx llmverify mcp
+```
+
+```jsonc
+// MCP client config
+{
+  "mcpServers": {
+    "llmverify": {
+      "command": "npx",
+      "args": ["-y", "llmverify", "mcp"]
+    }
+  }
+}
+```
+
+Six tools: `verify_llm_content`, `assess_hallucination_risk`, `check_prompt_injection`, `check_pii`, `redact_pii`, `get_llmverify_capabilities`. Stdio-only, zero outbound network, bounded inputs/outputs, PII-filtered responses, honest `notChecked`/audit semantics.
+
+Requires **Node.js ≥ 20** (the MCP SDK's floor; the rest of the package supports ≥ 18). The MCP SDK and zod are regular dependencies — the `mcp` command lazy-loads them so other commands pay no startup cost.
+
+See [docs/MCP.md](docs/MCP.md) for the full tool reference and security model.
+
+---
+
 ## Limitations
 
 llmverify is a triage tool, not a truth oracle. Be honest with yourself about what it can and cannot do:
@@ -140,8 +168,9 @@ If a claim matters, verify it yourself. llmverify narrows the risk surface; it d
 ## Documentation
 
 - [Quick Start](QUICK-START.md)
-- [Integration Guide](docs/INTEGRATION-GUIDE.md)
+- [Getting Started](docs/GETTING-STARTED.md)
 - [API Reference](docs/API-REFERENCE.md)
+- [MCP Server](docs/MCP.md)
 - [Risk Levels](docs/RISK-LEVELS.md)
 - [CLI Reference](docs/CLI-REFERENCE.md)
 - [Limitations](docs/LIMITATIONS.md)

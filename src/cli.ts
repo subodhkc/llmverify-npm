@@ -1603,4 +1603,27 @@ program
     console.log();
   });
 
+program
+  .command('mcp')
+  .description('Serve llmverify over MCP stdio transport (for MCP-compatible agents and IDEs)')
+  .action(async () => {
+    const nodeMajor = Number(process.versions.node.split('.')[0]);
+    if (nodeMajor < 20) {
+      console.error('The MCP server requires Node.js >= 20 (@modelcontextprotocol/server). You are running ' + process.version + '.');
+      process.exit(1);
+    }
+    try {
+      // Lazy-require: the MCP SDK is an optional dependency and must not
+      // be loaded for unrelated CLI commands (or slim --omit=optional installs).
+      const { serveMcp } = require('./mcp/serve');
+      await serveMcp();
+    } catch (error: any) {
+      if (error && error.code === 'MODULE_NOT_FOUND') {
+        console.error('MCP server dependencies are missing. Reinstall llmverify (the MCP SDK is a regular dependency).');
+        process.exit(1);
+      }
+      throw error;
+    }
+  });
+
 program.parse();

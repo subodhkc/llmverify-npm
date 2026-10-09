@@ -1,0 +1,97 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.subodhkc/llmverify",
+  "title": "LLMVerify",
+  "description": "Local-first MCP server exposing the llmverify AI output verification engine — heuristic hallucination-risk signals, prompt-injection detection, PII check/redaction, JSON validation, and audit receipts over stdio. Results are risk indicators for triage, not factual verification or compliance certification.",
+  "version": "1.8.0",
+  "repository": {
+    "url": "https://github.com/subodhkc/llmverify-npm",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "llmverify",
+      "version": "1.8.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "runtimeHint": "npx",
+      "runtimeArguments": [
+        {
+          "type": "positional",
+          "value": "-y"
+        }
+      ],
+      "packageArguments": [
+        {
+          "type": "positional",
+          "value": "mcp",
+          "description": "Run the llmverify MCP stdio server (llmverify mcp subcommand)"
+        }
+      ],
+      "environmentVariables": [
+        {
+          "name": "LLMVERIFY_MCP_MAX_INPUT_CHARS",
+          "description": "Max characters accepted in a content/input argument",
+          "default": "1000000",
+          "isRequired": false
+        },
+        {
+          "name": "LLMVERIFY_MCP_TIMEOUT_MS",
+          "description": "Per-tool wall-clock timeout in milliseconds",
+          "default": "60000",
+          "isRequired": false
+        },
+        {
+          "name": "LLMVERIFY_MCP_MAX_OUTPUT_ITEMS",
+          "description": "Cap on any single output array",
+          "default": "50",
+          "isRequired": false
+        },
+        {
+          "name": "LLMVERIFY_MCP_MAX_TEXT_FIELD_CHARS",
+          "description": "Cap on any single text field in output",
+          "default": "2000",
+          "isRequired": false
+        },
+        {
+          "name": "LLMVERIFY_HOME",
+          "description": "Base directory for engine local state",
+          "isRequired": false
+        },
+        {
+          "name": "LLMVERIFY_AUDIT_DIR",
+          "description": "Audit JSONL directory",
+          "isRequired": false
+        },
+        {
+          "name": "LLMVERIFY_LOG_DIR",
+          "description": "Operational log directory",
+          "isRequired": false
+        },
+        {
+          "name": "LLMVERIFY_BASELINE_DIR",
+          "description": "Drift baseline directory",
+          "isRequired": false
+        },
+        {
+          "name": "LLMVERIFY_USAGE_FILE",
+          "description": "Usage counter file",
+          "isRequired": false
+        },
+        {
+          "name": "LLMVERIFY_AUDIT_HASH_KEY",
+          "description": "Enables keyed hmac-sha256 content hashes in audit records",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "LLMVERIFY_AUDIT_NO_CONTENT_HASH",
+          "description": "Set to 1 to disable content hashes in audit records",
+          "isRequired": false
+        }
+      ]
+    }
+  ]
+}

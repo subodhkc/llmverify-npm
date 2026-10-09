@@ -1,0 +1,63 @@
+name: Publish to MCP Registry
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  publish-registry:
+    name: Submit server.json to the MCP Registry
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: 'https://registry.npmjs.org/'
+
+      # The MCP Registry validates the npm package referenced by
+      # server.json: package.json must carry the matching `mcpName`
+      # field, and the declared version must be live on npm.
+      - name: Wait for npm package to be available
+        run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          SVR_VERSION=$(node -p "require('./server.json').version")
+          MCP_NAME=$(node -p "require('./package.json').mcpName || ''")
+          SVR_NAME=$(node -p "require('./server.json').name")
+          if [ "$PKG_VERSION" != "$SVR_VERSION" ]; then
+            echo "::error::server.json version $SVR_VERSION != package.json $PKG_VERSION"
+            exit 1
+          fi
+          if [ "$MCP_NAME" != "$SVR_NAME" ]; then
+            echo "::error::package.json mcpName '$MCP_NAME' != server.json name '$SVR_NAME'"
+            exit 1
+          fi
+          for i in $(seq 1 30); do
+            if npm view "llmverify@$PKG_VERSION" version >/dev/null 2>&1; then
+              echo "llmverify@$PKG_VERSION is live on npm"
+              exit 0
+            fi
+            echo "Waiting for npm propagation ($i/30)..."
+            sleep 20
+          done
+          echo "::error::llmverify@$PKG_VERSION not visible on npm after 10 minutes"
+          exit 1
+
+      - name: Install mcp-publisher
+        run: |
+          curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+          chmod +x mcp-publisher
+          ./mcp-publisher --version || ./mcp-publisher --help
+
+      - name: Authenticate to MCP Registry via GitHub OIDC
+        run: ./mcp-publisher login github-oidc
+
+      - name: Publish to MCP Registry
+        run: ./mcp-publisher publish
