@@ -28,6 +28,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed - truthful capability metadata
 - New `getEngineCapabilities()` / `getPackageInfo()` for downstream integrations (e.g. a future MCP adapter): each capability states what it observes and what it does not establish.
+
+### Security - dependencies
+- Optional `express` (server mode) floor raised `^4.18.2` → `^4.22.3`; `proxy-addr` overridden to `^2.0.8` for this repo's tree. Production audit clean; the residual `proxy-addr` advisory inside express 4.x is documented in `docs/handoff/LLMVERIFY-RELEASE-CANDIDATE.md`.
+
+### Changed - verdict language
+- Server and IDE-extension verdict strings no longer equate "no findings" with "safe": `[PASS] SAFE TO USE` → `[PASS] NO ISSUES FLAGGED`; `[BLOCK] CRITICAL - DO NOT USE` → `[BLOCK] CRITICAL RISK`. `risk.action` documented as a content-risk recommendation, not authorization.
 - Methodology strings in the harmful-content, PII, and prompt-injection detectors no longer assert unsupported accuracy percentages.
 
 ### Fixed - test infrastructure

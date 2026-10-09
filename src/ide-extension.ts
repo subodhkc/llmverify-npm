@@ -48,7 +48,7 @@ export class LLMVerifyIDE {
       
       switch (risk.level) {
         case 'low':
-          verdict = '[PASS] SAFE TO USE';
+          verdict = '[PASS] NO ISSUES FLAGGED';
           safe = true;
           break;
         case 'moderate':
@@ -94,7 +94,7 @@ export class LLMVerifyIDE {
 
     switch (risk.level) {
       case 'low':
-        verdict = '[PASS] SAFE TO USE (local)';
+        verdict = '[PASS] NO ISSUES FLAGGED (local)';
         safe = true;
         break;
       case 'moderate':

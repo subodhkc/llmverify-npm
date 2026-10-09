@@ -687,7 +687,7 @@ function printRunResult(result: CoreRunResult): void {
   if (result.inputSafety) {
     console.log(chalk.bold('Input Safety'));
     console.log(chalk.gray('─'.repeat(40)));
-    const safeIcon = result.inputSafety.safe ? chalk.green('[OK] Safe') : chalk.red('[FAIL] Unsafe');
+    const safeIcon = result.inputSafety.safe ? chalk.green('[OK] No injection indicators') : chalk.red('[FAIL] Injection indicators found');
     console.log(`  Status:   ${safeIcon}`);
     console.log(`  Findings: ${result.inputSafety.injectionFindings.length}`);
     console.log();
