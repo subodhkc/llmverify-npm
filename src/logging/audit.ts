@@ -149,6 +149,7 @@ function envAuditConfig(): Partial<AuditConfig> {
 export class AuditLogger {
   private config: AuditConfig;
   private directoryAvailable: boolean | null = null;
+  private static rotationCounter = 0;
 
   constructor(config?: Partial<AuditConfig>) {
     this.config = { ...DEFAULT_AUDIT_CONFIG, ...envAuditConfig(), ...config };
@@ -343,8 +344,14 @@ export class AuditLogger {
       const stats = fs.statSync(auditFile);
 
       if (stats.size > this.config.maxFileSize!) {
+        // Date.now() alone can collide when several rotations happen within
+        // the same millisecond — a collision either silently overwrites the
+        // previous rotated file (POSIX rename) or aborts rotation (Windows).
         const timestamp = Date.now();
-        const rotatedFile = auditFile.replace('.jsonl', `.${timestamp}.jsonl`);
+        const rotatedFile = auditFile.replace(
+          '.jsonl',
+          `.${timestamp}-${AuditLogger.rotationCounter++}.jsonl`
+        );
         fs.renameSync(auditFile, rotatedFile);
 
         this.cleanupOldAudits();

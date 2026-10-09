@@ -26,7 +26,21 @@ const packJson = execSync('npm pack --dry-run --json', {
   encoding: 'utf8',
   maxBuffer: 16 * 1024 * 1024
 });
-const packed = JSON.parse(packJson)[0].files.map((f) => f.path);
+
+// npm versions differ on `pack --dry-run --json` output shape (array of
+// pack entries vs a single object), and warnings may precede the JSON.
+// Parse defensively: locate the JSON payload, accept either shape, and
+// fail loudly rather than silently validating an empty file list.
+const jsonStart = packJson.search(/[\[{]/);
+const parsed = jsonStart === -1 ? null : JSON.parse(packJson.slice(jsonStart));
+const packEntries = Array.isArray(parsed) ? parsed : parsed ? [parsed] : [];
+const packInfo = packEntries.find((e) => e && Array.isArray(e.files));
+if (!packInfo) {
+  console.error('[package-files] FAIL: `npm pack --dry-run --json` returned an unexpected shape');
+  console.error(packJson.slice(0, 500));
+  process.exit(1);
+}
+const packed = packInfo.files.map((f) => f.path);
 
 const tracked = new Set(
   execSync('git ls-files', { cwd: root, encoding: 'utf8' })
