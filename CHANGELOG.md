@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added - built-in MCP server
 - `llmverify` itself now serves MCP over stdio: `npx llmverify mcp` (or the `llmverify-mcp` bin alias). Six tools — `verify_llm_content`, `assess_hallucination_risk`, `check_prompt_injection`, `check_pii`, `redact_pii`, `get_llmverify_capabilities` — expose the public engine API to MCP-compatible agents and IDEs.
-- `@modelcontextprotocol/server` and `zod` ship as `optionalDependencies` (installed by default, skipped by `--omit=optional`); the `mcp` subcommand lazy-loads them and fails with a clear message when absent. The MCP surface requires Node.js ≥ 20 (SDK floor); the rest of the package still supports Node ≥ 18.
+- `@modelcontextprotocol/server` and `zod` ship as regular dependencies — the `llmverify-mcp` bin always has them, and `mcp` subcommand lazy-loads so other commands pay no startup cost. The MCP surface requires Node.js ≥ 20 (SDK floor; the `mcp` command fails with a clear message on older runtimes); the rest of the package still supports Node ≥ 18.
 - `server.json` + `mcpName` package metadata for the official MCP Registry (`io.github.subodhkc/llmverify`).
 - Adapter contract `1.1`: every tool returns validated `structuredContent` with honest `enginesNotChecked`/audit-receipt semantics, a privacy-filtered projection (PII-masked input-echoing fields with a provable `privacy.piiFieldsMasked` count), bounded inputs/outputs, and a serialized execution lane with distinct queued-expired vs running-timeout outcomes. See `docs/MCP.md`.
 - The MCP layer consumes only the package's public root exports (`../../index`) — it is a thin adapter, not a second engine.

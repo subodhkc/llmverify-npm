@@ -1619,7 +1619,7 @@ program
       await serveMcp();
     } catch (error: any) {
       if (error && error.code === 'MODULE_NOT_FOUND') {
-        console.error('MCP server dependencies are missing. Reinstall without --omit=optional, or install @modelcontextprotocol/server and zod.');
+        console.error('MCP server dependencies are missing. Reinstall llmverify (the MCP SDK is a regular dependency).');
         process.exit(1);
       }
       throw error;

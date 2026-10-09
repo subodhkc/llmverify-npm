@@ -145,7 +145,7 @@ npx llmverify mcp
 
 Six tools: `verify_llm_content`, `assess_hallucination_risk`, `check_prompt_injection`, `check_pii`, `redact_pii`, `get_llmverify_capabilities`. Stdio-only, zero outbound network, bounded inputs/outputs, PII-filtered responses, honest `notChecked`/audit semantics.
 
-Requires **Node.js ≥ 20** (the MCP SDK's floor; the rest of the package supports ≥ 18). The MCP dependencies are optional — installed by default, skipped by `--omit=optional`.
+Requires **Node.js ≥ 20** (the MCP SDK's floor; the rest of the package supports ≥ 18). The MCP SDK and zod are regular dependencies — the `mcp` command lazy-loads them so other commands pay no startup cost.
 
 See [docs/MCP.md](docs/MCP.md) for the full tool reference and security model.
 

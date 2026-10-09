@@ -16,10 +16,11 @@ npx llmverify mcp          # stdio MCP server
 npx llmverify-mcp
 ```
 
-The MCP SDK and zod are `optionalDependencies` — they install by default.
-Slim installs (`npm install --omit=optional`) skip them; the `mcp`
-command then fails with a clear message. Everything else in the package
-works without them.
+The MCP SDK and zod are regular dependencies — the `llmverify-mcp` bin
+always has them. The `mcp` CLI subcommand lazy-loads the SDK so every
+other command pays no startup cost. On Node < 20 the `mcp` command and
+bin fail with a clear message; everything else in the package still
+works.
 
 ### Client configuration
 
