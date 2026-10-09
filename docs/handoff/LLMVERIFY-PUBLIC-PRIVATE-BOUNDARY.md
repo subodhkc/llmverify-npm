@@ -2,7 +2,7 @@
 
 **Scope:** `llmverify` npm package at PR #21 head `758c002aeb4668b42e41dc3bf397c952b8d2c2f6` — every publishable module, export, doc, and bundled file audited against HAIEC's proprietary assurance surface. `haiec-website` was used as a read-only boundary reference; no HAIEC code was copied or modified.
 
-**Method:** inspected `dist` exports (158 named exports), all `src/` modules (88 files), shipped `docs/`, `examples/`, `recipes/`, `prompts/`, and `schema/`, plus the `npm pack` file list (237 files, 689 kB).
+**Method:** inspected `dist` exports (158 named exports), all `src/` modules (88 files), shipped `docs/`, `examples/`, `recipes/`, `prompts/`, and `schema/`, plus the `npm pack` file list (222 files after the explicit allowlist in Task 03E; internal handoff docs and untracked working-tree files are excluded).
 
 ## Verdict vocabulary scan
 
