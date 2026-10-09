@@ -24,6 +24,8 @@ Every import the adapter makes from `'llmverify'` (package root only — it neve
 
 **27 runtime/type imports — zero missing, zero breaking changes** vs the vendored dev tarball (`llmverify-1.6.1-758c002.tgz`, sha256-verified against this head).
 
+> **Provenance caveat:** the vendored tarball was `npm pack`ed from a local working tree of `758c002`, which included ~13 gitignored docs files (see `LLMVERIFY-RELEASE-CANDIDATE.md` § Defect). Code/dist content is identical to a clean-checkout build of the same commit — the delta is documentation files only, confirmed by the dry-run diff. After `1.7.0` publishes, the vendored tarball is retired entirely.
+
 ## Contract points the adapter depends on
 
 | Contract | Adapter usage | Engine status |

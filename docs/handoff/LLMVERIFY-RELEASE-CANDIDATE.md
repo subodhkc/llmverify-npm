@@ -71,6 +71,15 @@ Not `1.6.2` — new public API surface is more than a patch. Not `2.0.0` — no 
 
 - `llmverify-mcp` adapter requires exactly this hardened surface — see `LLMVERIFY-MCP-COMPATIBILITY.md`. It must never silently fall back to published `1.6.1`.
 
+## Defect found in Task 03D — non-reproducible `npm pack` (P1)
+
+`files: ["docs", …]` packs whatever is on **disk**, but `.gitignore` hides a set of doc files (`*-GUIDE.md`, `AUTO-*.md`, `AI-*.md`, `docs/SERVER-MODE.md`, `docs/QUICK-START-*`, `*-PLAN.md`, …). Result: **13 files ship in a locally-built tarball that are not in git** — `AI-GUIDE.md`, `prompts/llmverify-assistants.md`, `docs/{AI-INTEGRATION,ALGORITHMS,AUTO-VERIFY-IDE,BADGE-GUIDE,ERROR-GUIDE,FOR-DEVELOPERS,IDE-INTEGRATION,INTEGRATION-GUIDE,QUICK-START-IDE,SERVER-MODE}.md`, `docs/release-1.6/01-CHANGE-PLAN.md`.
+
+- Published `1.6.1` (built via CI clean checkout) contains **none** of them → the registry artifact and a maintainer-machine `npm pack` differ.
+- `AI-GUIDE.md` is *explicitly* whitelisted in `files` yet gitignored (`AI-*.md`) — intent conflict: either it was never meant to hide, or `files` lists it optimistically. Same class for `prompts/llmverify-assistants.md`.
+- Side effect already in flight: the vendored `llmverify-1.6.1-758c002.tgz` inside `llmverify-mcp` was built from this working tree and therefore contains these untracked docs (docs only — harmless, but provenance-relevant: the tarball is not byte-reproducible from commit `758c002` alone).
+- **Owner decision required:** (a) commit the docs and keep them public, or (b) keep them private and add `docs/.npmignore` + remove `AI-GUIDE.md`/`prompts/` from `files` so the artifact is reproducible regardless of machine state. Until decided, **publish only from a clean CI checkout / workflow** — never `npm publish` from a working tree containing untracked docs.
+
 ## Release decision table
 
 | Gate | Status |
@@ -79,6 +88,7 @@ Not `1.6.2` — new public API surface is more than a patch. Not `2.0.0` — no 
 | Export compatibility vs published 1.6.1 | **READY** — additive only |
 | Tests (37 suites / 751 tests, Node 24 local; Node 18–24 CI) | **READY** |
 | Production dependency audit | **READY** — 0 vulns after express/proxy-addr fix |
+| Artifact reproducibility (local pack ≠ git checkout) | **NEEDS_FIX** — decide (a)/(b) above; enforce clean-checkout publish in the meantime |
 | Version identity `1.7.0` | **NEEDS_APPROVAL** — bump staged, not applied |
 | LICENSE/attribution (KingCaliber vs HAIEC vs Subodh KC) | **NEEDS_APPROVAL** — legal review, see LICENSING-REVIEW |
 | `cli connect`/`sync` SaaS path stays in OSS package | **NEEDS_APPROVAL** — product decision |
@@ -89,8 +99,9 @@ Not `1.6.2` — new public API surface is more than a patch. Not `2.0.0` — no 
 1. [ ] Owner approves version `1.7.0` → apply `package.json`/CHANGELOG version bump.
 2. [ ] Legal signs off LICENSE/attribution (LICENSING-REVIEW).
 3. [ ] Product signs off `connect`/`sync` remaining in the OSS CLI.
-4. [ ] Merge PR #21 (squash or merge per repo convention).
-5. [ ] Tag `v1.7.0` on main; `npm publish --provenance` via `npm-publish.yml`.
-6. [ ] Verify registry artifact (`npm view llmverify@1.7.0`, install smoke).
-7. [ ] Update `llmverify-mcp` dep from bundled tarball to `^1.7.0`; re-run its packed-install gate.
-8. [ ] Only then proceed to Task 04 extraction work.
+4. [ ] Resolve the untracked-docs packaging split (commit them, or npmignore them) so `npm pack` output equals a clean-checkout build.
+5. [ ] Merge PR #21 (squash or merge per repo convention).
+6. [ ] Tag `v1.7.0` on main; publish **only** via `npm-publish.yml` (clean checkout) — never a local `npm publish`.
+7. [ ] Verify registry artifact (`npm view llmverify@1.7.0`, install smoke).
+8. [ ] Update `llmverify-mcp` dep from bundled tarball to `^1.7.0`; re-run its packed-install gate.
+9. [ ] Only then proceed to Task 04 extraction work.
